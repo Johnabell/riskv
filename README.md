@@ -26,7 +26,7 @@ Currently the moderation team consists of John Bell only. We would welcome more 
 
 ## Licence
 
-The project is licensed under the [MIT license](https://github.com/Johnabell/atom_box/blob/master/LICENSE).
+The project is licensed under the [GNU General Public License v3.0](https://github.com/Johnabell/riskv/blob/master/LICENSE).
 
 ## Useful links
 - [RISC-V assembly for beginers](https://medium.com/swlh/risc-v-assembly-for-beginners-387c6cd02c49)
