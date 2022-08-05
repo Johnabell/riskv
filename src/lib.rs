@@ -85,7 +85,7 @@ trait ConstZero: Zero {
 
 impl<T> Processor<T>
 where
-    T: Num + Copy
+    T: Num + Copy,
 {
     /// Executes a single instruction on the processor
     fn execute(&mut self, instruction: Instruction<T>) {
