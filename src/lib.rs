@@ -1,5 +1,5 @@
 use instructions::Instruction;
-use num::{Num, Zero};
+use num::Num;
 
 mod instructions;
 
@@ -42,7 +42,7 @@ mod instructions;
 /// | 30 | -   | x30      | t5       | temporary register 5                 | caller   |
 /// | 31 | -   | x31      | t6       | temporary register 6                 | caller   |
 #[derive(Debug, Default, PartialEq, Eq)]
-pub struct Processor<T>
+pub struct Registers<T>
 where
     T: Num,
 {
@@ -79,26 +79,32 @@ where
     t6: T,
 }
 
-trait ConstZero: Zero {
-    fn const_zero() -> Self;
+// TODO consider making an architecture trait capturing RV32I, RV32E, RV64I, RV128I, etc
+pub trait Architecture: Num {}
+
+pub struct Processor<T: Architecture> {
+    registers: Registers<T>,
+    // Programme Counter
+    pc: T,
+    instructions: Vec<Instruction>,
 }
 
-impl<T> Processor<T>
+impl<T> Registers<T>
 where
-    T: Num + Copy,
+    T: Num + Copy + From<u16> + From<u32>,
 {
     /// Executes a single instruction on the processor
-    fn execute(&mut self, instruction: Instruction<T>) {
+    fn execute(&mut self, instruction: Instruction) {
         match instruction {
             Instruction::ADD { rd, rs1, rs2 } => self[rd] = self[rs1] + self[rs2],
-            Instruction::ADDI { rd, rs1, imm } => self[rd] = self[rs1] + imm,
+            Instruction::ADDI { rd, rs1, imm } => self[rd] = self[rs1] + imm.into(),
             Instruction::SUB { rd, rs1, rs2 } => self[rd] = self[rs1] - self[rs2],
-            Instruction::LI { rd, imm } => self[rd] = imm,
+            Instruction::LI { rd, imm } => self[rd] = imm.into(),
         }
     }
 }
 
-impl<T> std::ops::Index<u8> for Processor<T>
+impl<T> std::ops::Index<u8> for Registers<T>
 where
     T: Num,
 {
@@ -143,7 +149,7 @@ where
     }
 }
 
-impl<T> std::ops::Index<Register> for Processor<T>
+impl<T> std::ops::Index<Register> for Registers<T>
 where
     T: Num,
 {
@@ -187,7 +193,7 @@ where
     }
 }
 
-impl<T> std::ops::IndexMut<u8> for Processor<T>
+impl<T> std::ops::IndexMut<u8> for Registers<T>
 where
     T: Num,
 {
@@ -230,7 +236,7 @@ where
     }
 }
 
-impl<T> std::ops::IndexMut<Register> for Processor<T>
+impl<T> std::ops::IndexMut<Register> for Registers<T>
 where
     T: Num,
 {
@@ -271,40 +277,114 @@ where
         }
     }
 }
+
 #[repr(u8)]
+#[derive(Debug, PartialEq, Eq, Clone, Copy)]
 enum Register {
+    /// hardwired zero
     ZERO = 0,
+    /// return address
     RA = 1,
+    /// stack pointer
     SP = 2,
+    /// global pointer
     GP = 3,
+    /// thread pointer
     TP = 4,
+    /// temporary register 0
     T0 = 5,
+    /// temporary register 1
     T1 = 6,
+    /// temporary register 2
     T2 = 7,
+    /// saved register 0 / frame pointer
     S0 = 8,
+    /// saved register 1
     S1 = 9,
+    /// function argument 0 / return value 0
     A0 = 10,
+    /// function argument 1 / return value 1
     A1 = 11,
+    /// function argument 2
     A2 = 12,
+    /// function argument 3
     A3 = 13,
+    /// function argument 4
     A4 = 14,
+    /// function argument 5
     A5 = 15,
+    /// function argument 6
     A6 = 16,
+    /// function argument 7
     A7 = 17,
+    /// saved register 2
     S2 = 18,
+    /// saved register 3
     S3 = 19,
+    /// saved register 4
     S4 = 20,
+    /// saved register 5
     S5 = 21,
+    /// saved register 6
     S6 = 22,
+    /// saved register 7
     S7 = 23,
+    /// saved register 8
     S8 = 24,
+    /// saved register 9
     S9 = 25,
+    /// saved register 10
     S10 = 26,
+    /// saved register 11
     S11 = 27,
+    /// temporary register 3
     T3 = 28,
+    /// temporary register 4
     T4 = 29,
+    /// temporary register 5
     T5 = 30,
+    /// temporary register 6
     T6 = 31,
+}
+
+impl From<u8> for Register {
+    fn from(value: u8) -> Register {
+        match value & 0b_0001_1111 {
+            0 => Register::ZERO,
+            1 => Register::RA,
+            2 => Register::SP,
+            3 => Register::GP,
+            4 => Register::TP,
+            5 => Register::T0,
+            6 => Register::T1,
+            7 => Register::T2,
+            8 => Register::S0,
+            9 => Register::S1,
+            10 => Register::A0,
+            11 => Register::A1,
+            12 => Register::A2,
+            13 => Register::A3,
+            14 => Register::A4,
+            15 => Register::A5,
+            16 => Register::A6,
+            17 => Register::A7,
+            18 => Register::S2,
+            19 => Register::S3,
+            20 => Register::S4,
+            21 => Register::S5,
+            22 => Register::S6,
+            23 => Register::S7,
+            24 => Register::S8,
+            25 => Register::S9,
+            26 => Register::S10,
+            27 => Register::S11,
+            28 => Register::T3,
+            29 => Register::T4,
+            30 => Register::T5,
+            31 => Register::T6,
+            _ => unreachable!("Already masked the value"),
+        }
+    }
 }
 
 #[cfg(test)]
@@ -312,7 +392,7 @@ mod test {
     use super::*;
     macro_rules! processor_state {
         ($($register:ident: $value:expr),* $(,)?) => {
-            Processor {
+            Registers::<u32> {
                 $($register: $value,)*
                 ..Default::default()
             }
@@ -368,5 +448,11 @@ mod test {
             changes: {t1: 45, t2: 3},
             to: {t1: 45, t2: 3, t3: 42},
         );
+    }
+
+    #[test]
+    fn from_u8() {
+        assert_eq!(Register::from(31), Register::T6);
+        assert_eq!(Register::from(32), Register::ZERO);
     }
 }
