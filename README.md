@@ -33,4 +33,5 @@ The project is licensed under the [GNU General Public License v3.0](https://gith
 - [RISC-V instruction set cheatsheet](https://itnext.io/risc-v-instruction-set-cheatsheet-70961b4bbe8)
 - [RISC-V assembly course](https://web.eecs.utk.edu/~smarz1/courses/ece356/notes/assembly/)
 - [RISC-V examples](https://github.com/takenobu-hs/cpu-assembly-examples/tree/master/riscv/linux)
-- [RISC-V Assembly Programmer's Manual](https://github.com/riscv-non-isa/riscv-asm-manual/blob/master/riscv-asm.md)
+- [RISC-V Assembly Programmer's Manual](https://github.com/riscv-non-isa/riscv-asm-manual/blob/master/riscv-asm.md)- - [RISC-V Visual Emulator](https://eseo-tech.github.io/emulsiV/)
+- [RISC-V Instructions reference](https://msyksphinz-self.github.io/riscv-isadoc/html/rvi.html)
