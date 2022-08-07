@@ -86,7 +86,7 @@ pub struct Processor<T: Architecture> {
     registers: Registers<T>,
     // Programme Counter
     pc: T,
-    instructions: Vec<Instruction>,
+    memory: Vec<T>,
 }
 
 impl<T> Registers<T>
