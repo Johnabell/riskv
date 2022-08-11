@@ -1,11 +1,13 @@
 mod funct3;
 mod funct7;
 mod immi;
+mod immu;
+mod pseudoinstructions;
 mod rd;
 mod rs1;
 mod rs2;
 
-use self::{funct3::Funct3, funct7::Funct7, immi::ImmI, rd::Rd, rs1::Rs1, rs2::Rs2};
+use self::{funct3::Funct3, funct7::Funct7, immi::ImmI, immu::ImmU, rd::Rd, rs1::Rs1, rs2::Rs2};
 
 use super::Register;
 /// An representation of different instructions.
@@ -13,6 +15,7 @@ use super::Register;
 /// Would we like to work with the raw bytes of the instructions, or simply provide a mechanism to
 /// convert to the raw bytes.
 #[cfg_attr(test, derive(Debug, PartialEq, Eq))]
+#[derive(Clone, Copy)]
 pub(super) enum Instruction {
     /// Integer ADD instruction to add the values in `rs1` and `rs2` and
     /// place the output in `rd`
@@ -29,7 +32,7 @@ pub(super) enum Instruction {
     ADDI {
         rd: Register,
         rs1: Register,
-        imm: u16,
+        imm: i16,
     },
 
     /// Integer SUB instruction to take the value in `rs1` and subtract `rs2`  
@@ -41,20 +44,22 @@ pub(super) enum Instruction {
         rs2: Register,
     },
 
-    /// Load Immediate
+    /// Load Upper Immediate
     ///
-    /// Note: in RISK-V this is a Psudo Instruction that desugars to a load upper Immediate
-    /// and a add immediate for the lower bits.
-    /// See
-    /// [ref](https://github.com/riscv-non-isa/riscv-asm-manual/blob/master/riscv-asm.md#load-immediate).
+    /// Build 32-bit constants and uses the U-type format. LUI places the U-immediate value in the
+    /// top 20 bits of the destination register rd, filling in the lowest 12 bits with zeros.
     ///
-    /// For now we are treating this as a single instruction
-    LI { rd: Register, imm: u32 },
+    /// rd <- sext(immediate[31:12] << 12)
+    LUI { rd: Register, imm: i32 },
 }
 
 impl From<u32> for Instruction {
     fn from(value: u32) -> Self {
         match Instruction::op_code(value) {
+            0b_0110111 => Instruction::LUI {
+                rd: *Rd::from(value),
+                imm: *ImmU::from(value),
+            },
             0b_0010011 => match *Funct3::from(value) {
                 0b_000 => Instruction::ADDI {
                     rd: *Rd::from(value),
@@ -103,7 +108,7 @@ mod test {
     use crate::{instructions::Instruction, Register};
 
     #[test]
-    fn from_u32() {
+    fn from_i32() {
         assert_eq!(
             Instruction::from(u32::from_le(0b_0000001_00000_00000_000_00001_0010011)),
             Instruction::ADDI {
@@ -126,6 +131,13 @@ mod test {
                 rd: Register::SP,
                 rs1: Register::S11,
                 rs2: Register::T4,
+            }
+        );
+        assert_eq!(
+            Instruction::from(u32::from_le(0b_0100100_01010_01100_101_11000_0110111)),
+            Instruction::LUI {
+                rd: Register::S8,
+                imm: 0x48A65
             }
         );
     }

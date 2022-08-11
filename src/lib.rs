@@ -1,7 +1,8 @@
 use instructions::Instruction;
-use num::Num;
+use num::{traits::WrappingAdd, Num};
 
 mod instructions;
+mod integer;
 
 /// Struct representing the RISK-V Processor.
 ///
@@ -46,6 +47,10 @@ pub struct Registers<T>
 where
     T: Num,
 {
+    zero: T,
+    // Since zero is hard wired, we don't want to give out a mutable reference,
+    // this is a compromise until I think of a better way to do this.
+    _zero: T,
     ra: T,
     sp: T,
     gp: T,
@@ -91,15 +96,22 @@ pub struct Processor<T: Architecture> {
 
 impl<T> Registers<T>
 where
-    T: Num + Copy + From<u16> + From<u32>,
+    T: Num + Copy + From<i16> + From<i32> + WrappingAdd,
 {
     /// Executes a single instruction on the processor
     fn execute(&mut self, instruction: Instruction) {
         match instruction {
             Instruction::ADD { rd, rs1, rs2 } => self[rd] = self[rs1] + self[rs2],
-            Instruction::ADDI { rd, rs1, imm } => self[rd] = self[rs1] + imm.into(),
+            Instruction::ADDI { rd, rs1, imm } => self[rd] = self[rs1].wrapping_add(&imm.into()),
             Instruction::SUB { rd, rs1, rs2 } => self[rd] = self[rs1] - self[rs2],
-            Instruction::LI { rd, imm } => self[rd] = imm.into(),
+            // Instruction::LI { rd, imm } => self[rd] = imm.into(),
+            Instruction::LUI { rd, imm } => self[rd] = (imm << 12).into(),
+        }
+    }
+
+    fn execute_many(&mut self, instructions: impl Iterator<Item = Instruction>) {
+        for instruction in instructions {
+            self.execute(instruction);
         }
     }
 }
@@ -112,7 +124,7 @@ where
 
     fn index(&self, index: u8) -> &Self::Output {
         match index {
-            0 => todo!(),
+            0 => &self.zero,
             1 => &self.ra,
             2 => &self.sp,
             3 => &self.gp,
@@ -157,7 +169,7 @@ where
 
     fn index(&self, index: Register) -> &Self::Output {
         match index {
-            Register::ZERO => todo!(),
+            Register::ZERO => &self.zero,
             Register::RA => &self.ra,
             Register::SP => &self.sp,
             Register::GP => &self.gp,
@@ -199,7 +211,7 @@ where
 {
     fn index_mut(&mut self, index: u8) -> &mut Self::Output {
         match index {
-            0 => todo!(),
+            0 => &mut self._zero,
             1 => &mut self.ra,
             2 => &mut self.sp,
             3 => &mut self.gp,
@@ -242,7 +254,7 @@ where
 {
     fn index_mut(&mut self, index: Register) -> &mut Self::Output {
         match index {
-            Register::ZERO => todo!(),
+            Register::ZERO => &mut self._zero,
             Register::RA => &mut self.ra,
             Register::SP => &mut self.sp,
             Register::GP => &mut self.gp,
@@ -389,10 +401,12 @@ impl From<u8> for Register {
 
 #[cfg(test)]
 mod test {
+    use crate::integer::i12;
+
     use super::*;
     macro_rules! processor_state {
         ($($register:ident: $value:expr),* $(,)?) => {
-            Registers::<u32> {
+            Registers::<i32> {
                 $($register: $value,)*
                 ..Default::default()
             }
@@ -413,14 +427,36 @@ mod test {
             assert_eq!(processor, processor_state!($final_state));
         };
     }
+    macro_rules! test_execute_many {
+        ($instructions:expr, changes: $initial_state:tt, to: $final_state:tt $(,)?) => {
+            // Arrange
+            let mut processor = processor_state!($initial_state);
+
+            // Act
+            processor.execute_many($instructions);
+
+            // Assert
+            assert_eq!(processor, processor_state!($final_state));
+        };
+    }
 
     #[test]
     fn execute_load_immediate() {
-        test_execute!(
-            Instruction::LI{rd: Register::T1, imm: 42},
-            changes: {},
-            to: {t1: 42},
-        );
+        for i in [
+            0,
+            i12::MIN as i32,
+            i12::MAX as i32,
+            i12::MIN as i32 - 1,
+            i12::MAX as i32 + 1,
+            i32::MAX,
+            i32::MIN,
+        ] {
+            test_execute_many!(
+                Instruction::LI(Register::T1, i),
+                changes: {},
+                to: {t1: i},
+            );
+        }
     }
 
     #[test]
