@@ -89,7 +89,9 @@ where
 
 // TODO consider making an architecture trait capturing RV32I, RV32E, RV64I, RV128I, etc
 pub trait Architecture: Num {}
+impl Architecture for i32 {}
 
+#[derive(Debug, Default, PartialEq, Eq)]
 pub struct Processor<T: Architecture> {
     registers: Registers<T>,
     // Programme Counter
@@ -97,18 +99,23 @@ pub struct Processor<T: Architecture> {
     memory: Vec<T>,
 }
 
-impl<T> Registers<T>
+impl<T> Processor<T>
 where
-    T: Num + Copy + From<i16> + From<i32> + WrappingAdd + WrappingSub,
+    T: Architecture + Copy + From<i16> + From<i32> + WrappingAdd + WrappingSub,
 {
     /// Executes a single instruction on the processor
     fn execute(&mut self, instruction: Instruction) {
         match instruction {
-            Instruction::ADD { rd, rs1, rs2 } => self[rd] = self[rs1].wrapping_add(&self[rs2]),
-            Instruction::ADDI { rd, rs1, imm } => self[rd] = self[rs1].wrapping_add(&imm.into()),
-            Instruction::SUB { rd, rs1, rs2 } => self[rd] = self[rs1].wrapping_sub(&self[rs2]),
-            // Instruction::LI { rd, imm } => self[rd] = imm.into(),
-            Instruction::LUI { rd, imm } => self[rd] = (imm << 12).into(),
+            Instruction::ADD { rd, rs1, rs2 } => {
+                self.registers[rd] = self.registers[rs1].wrapping_add(&self.registers[rs2])
+            }
+            Instruction::ADDI { rd, rs1, imm } => {
+                self.registers[rd] = self.registers[rs1].wrapping_add(&imm.into())
+            }
+            Instruction::SUB { rd, rs1, rs2 } => {
+                self.registers[rd] = self.registers[rs1].wrapping_sub(&self.registers[rs2])
+            }
+            Instruction::LUI { rd, imm } => self.registers[rd] = (imm << 12).into(),
         }
     }
 
@@ -409,8 +416,11 @@ mod test {
     use super::*;
     macro_rules! processor_state {
         ($($register:ident: $value:expr),* $(,)?) => {
-            Registers::<i32> {
-                $($register: $value,)*
+            Processor::<i32> {
+                registers: Registers::<i32> {
+                    $($register: $value,)*
+                    ..Default::default()
+                },
                 ..Default::default()
             }
         };
