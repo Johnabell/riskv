@@ -1,5 +1,8 @@
 use instructions::Instruction;
-use num::{traits::WrappingAdd, Num};
+use num::{
+    traits::{WrappingAdd, WrappingSub},
+    Num,
+};
 
 mod instructions;
 mod integer;
@@ -96,14 +99,14 @@ pub struct Processor<T: Architecture> {
 
 impl<T> Registers<T>
 where
-    T: Num + Copy + From<i16> + From<i32> + WrappingAdd,
+    T: Num + Copy + From<i16> + From<i32> + WrappingAdd + WrappingSub,
 {
     /// Executes a single instruction on the processor
     fn execute(&mut self, instruction: Instruction) {
         match instruction {
-            Instruction::ADD { rd, rs1, rs2 } => self[rd] = self[rs1] + self[rs2],
+            Instruction::ADD { rd, rs1, rs2 } => self[rd] = self[rs1].wrapping_add(&self[rs2]),
             Instruction::ADDI { rd, rs1, imm } => self[rd] = self[rs1].wrapping_add(&imm.into()),
-            Instruction::SUB { rd, rs1, rs2 } => self[rd] = self[rs1] - self[rs2],
+            Instruction::SUB { rd, rs1, rs2 } => self[rd] = self[rs1].wrapping_sub(&self[rs2]),
             // Instruction::LI { rd, imm } => self[rd] = imm.into(),
             Instruction::LUI { rd, imm } => self[rd] = (imm << 12).into(),
         }
