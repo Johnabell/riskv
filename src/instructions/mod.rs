@@ -1,3 +1,4 @@
+#![allow(clippy::unusual_byte_groupings, clippy::upper_case_acronyms)]
 mod funct3;
 mod funct7;
 mod immi;
@@ -17,14 +18,22 @@ use super::Register;
 #[cfg_attr(test, derive(Debug, PartialEq, Eq))]
 #[derive(Clone, Copy)]
 pub(super) enum Instruction {
-    /// Integer ADD instruction to add the values in `rs1` and `rs2` and
-    /// place the output in `rd`
-    /// rd <- rs1 + rs2
-    ADD {
-        rd: Register,
-        rs1: Register,
-        rs2: Register,
-    },
+    /// Load Upper Immediate
+    ///
+    /// Build 32-bit constants and uses the U-type format. LUI places the U-immediate value in the
+    /// top 20 bits of the destination register rd, filling in the lowest 12 bits with zeros.
+    ///
+    /// rd <- sext(immediate[31:12] << 12)
+    LUI { rd: Register, imm: i32 },
+
+    /// Add upper immediate to programme counter
+    ///
+    /// Build pc-relative addresses and uses the U-type format. AUIPC forms a 32-bit offset from
+    /// the 20-bit U-immediate, filling in the lowest 12 bits with zeros, adds this offset to the
+    /// pc, then places the result in register rd.
+    ///
+    /// rd = pc + sext(immediate[31:12] << 12)
+    AUIPC { rd: Register, imm: i32 },
 
     /// Integer ADD immediate instruction to take the value in `rs1` and add `imm`
     /// placing the output in `rd`
@@ -35,6 +44,25 @@ pub(super) enum Instruction {
         imm: i16,
     },
 
+    /// Set Less Than Immediate
+    /// Place the value 1 in register rd if register rs1 is less than the signextended immediate
+    /// when both are treated as signed numbers, else 0 is written to rd.
+    /// rd = rs1 <s sext(immediate)
+    SLTI {
+        rd: Register,
+        rs1: Register,
+        imm: i16,
+    },
+
+    /// Integer ADD instruction to add the values in `rs1` and `rs2` and
+    /// place the output in `rd`
+    /// rd <- rs1 + rs2
+    ADD {
+        rd: Register,
+        rs1: Register,
+        rs2: Register,
+    },
+
     /// Integer SUB instruction to take the value in `rs1` and subtract `rs2`  
     /// placing the output in `rd`
     /// rd <- rs1 - rs2
@@ -43,14 +71,6 @@ pub(super) enum Instruction {
         rs1: Register,
         rs2: Register,
     },
-
-    /// Load Upper Immediate
-    ///
-    /// Build 32-bit constants and uses the U-type format. LUI places the U-immediate value in the
-    /// top 20 bits of the destination register rd, filling in the lowest 12 bits with zeros.
-    ///
-    /// rd <- sext(immediate[31:12] << 12)
-    LUI { rd: Register, imm: i32 },
 }
 
 impl From<u32> for Instruction {
@@ -60,8 +80,17 @@ impl From<u32> for Instruction {
                 rd: *Rd::from(value),
                 imm: *ImmU::from(value),
             },
+            0b_0010111 => Instruction::AUIPC {
+                rd: *Rd::from(value),
+                imm: *ImmU::from(value),
+            },
             0b_0010011 => match *Funct3::from(value) {
                 0b_000 => Instruction::ADDI {
+                    rd: *Rd::from(value),
+                    rs1: *Rs1::from(value),
+                    imm: *ImmI::from(value),
+                },
+                0b_010 => Instruction::SLTI {
                     rd: *Rd::from(value),
                     rs1: *Rs1::from(value),
                     imm: *ImmI::from(value),
@@ -110,10 +139,32 @@ mod test {
     #[test]
     fn from_i32() {
         assert_eq!(
+            Instruction::from(u32::from_le(0b_0100100_01010_01100_101_11000_0110111)),
+            Instruction::LUI {
+                rd: Register::S8,
+                imm: 0x48A65
+            }
+        );
+        assert_eq!(
+            Instruction::from(u32::from_le(0b_0100100_01010_01100_111_11100_0010111)),
+            Instruction::AUIPC {
+                rd: Register::T3,
+                imm: 0x48A67
+            }
+        );
+        assert_eq!(
             Instruction::from(u32::from_le(0b_0000001_00000_00000_000_00001_0010011)),
             Instruction::ADDI {
                 rd: Register::RA,
                 rs1: Register::ZERO,
+                imm: 32
+            }
+        );
+        assert_eq!(
+            Instruction::from(u32::from_le(0b_0000001_00000_00100_010_00011_0010011)),
+            Instruction::SLTI {
+                rd: Register::GP,
+                rs1: Register::TP,
                 imm: 32
             }
         );
@@ -131,13 +182,6 @@ mod test {
                 rd: Register::SP,
                 rs1: Register::S11,
                 rs2: Register::T4,
-            }
-        );
-        assert_eq!(
-            Instruction::from(u32::from_le(0b_0100100_01010_01100_101_11000_0110111)),
-            Instruction::LUI {
-                rd: Register::S8,
-                imm: 0x48A65
             }
         );
     }

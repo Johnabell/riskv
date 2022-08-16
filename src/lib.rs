@@ -101,21 +101,32 @@ pub struct Processor<T: Architecture> {
 
 impl<T> Processor<T>
 where
-    T: Architecture + Copy + From<i16> + From<i32> + WrappingAdd + WrappingSub,
+    T: Architecture
+        + Copy
+        + From<i16>
+        + From<i32>
+        + WrappingAdd
+        + WrappingSub
+        + PartialOrd
+        + From<bool>,
 {
     /// Executes a single instruction on the processor
     fn execute(&mut self, instruction: Instruction) {
         match instruction {
-            Instruction::ADD { rd, rs1, rs2 } => {
-                self.registers[rd] = self.registers[rs1].wrapping_add(&self.registers[rs2])
-            }
+            Instruction::LUI { rd, imm } => self.registers[rd] = (imm << 12).into(),
+            Instruction::AUIPC { rd, imm } => self.registers[rd] = self.pc + (imm << 12).into(),
             Instruction::ADDI { rd, rs1, imm } => {
                 self.registers[rd] = self.registers[rs1].wrapping_add(&imm.into())
+            }
+            Instruction::SLTI { rd, rs1, imm } => {
+                self.registers[rd] = (self.registers[rs1] < imm.into()).into()
+            }
+            Instruction::ADD { rd, rs1, rs2 } => {
+                self.registers[rd] = self.registers[rs1].wrapping_add(&self.registers[rs2])
             }
             Instruction::SUB { rd, rs1, rs2 } => {
                 self.registers[rd] = self.registers[rs1].wrapping_sub(&self.registers[rs2])
             }
-            Instruction::LUI { rd, imm } => self.registers[rd] = (imm << 12).into(),
         }
     }
 
@@ -302,6 +313,7 @@ where
 
 #[repr(u8)]
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
+#[allow(clippy::upper_case_acronyms)]
 enum Register {
     /// hardwired zero
     ZERO = 0,
@@ -414,18 +426,27 @@ mod test {
     use crate::integer::i12;
 
     use super::*;
-    macro_rules! processor_state {
+    macro_rules! register_state {
         ($($register:ident: $value:expr),* $(,)?) => {
-            Processor::<i32> {
-                registers: Registers::<i32> {
-                    $($register: $value,)*
-                    ..Default::default()
-                },
+            Registers::<i32> {
+                $($register: $value,)*
                 ..Default::default()
             }
         };
         ({$($register:ident: $value:expr),* $(,)?}) => {
-            processor_state!($($register: $value,)*)
+            register_state!($($register: $value,)*)
+        };
+    }
+    macro_rules! processor_state {
+        (registers: $register_state:tt,  $($detail:ident: $value:expr),* $(,)?) => {
+            Processor::<i32> {
+                registers: register_state!($register_state),
+                $($detail: $value,)*
+                ..Default::default()
+            }
+        };
+        ({registers: $register_state:tt $(,)? $($detail:ident: $value:expr),* $(,)?}) => {
+            processor_state!(registers: $register_state, $($detail: $value,)*)
         };
     }
     macro_rules! test_execute {
@@ -466,18 +487,23 @@ mod test {
         ] {
             test_execute_many!(
                 Instruction::LI(Register::T1, i),
-                changes: {},
-                to: {t1: i},
+                changes: {registers: {}},
+                to: {registers: {t1: i}},
             );
         }
     }
 
     #[test]
-    fn execute_add() {
+    fn execute_auipc() {
         test_execute!(
-            Instruction::ADD{rd: Register::T3, rs1: Register::T1, rs2: Register::T2},
-            changes: {t1: 21, t2: 21},
-            to: {t1: 21, t2: 21, t3: 42},
+            Instruction::AUIPC { rd: Register::SP, imm: 0x2BAAA },
+            changes: {registers: {}, pc: 0x0000_0AAD},
+            to: {registers: {sp: 0x2BAA_AAAD}, pc: 0x0000_0AAD},
+        );
+        test_execute!(
+            Instruction::AUIPC { rd: Register::SP, imm: 0xDEAD_B },
+            changes: {registers: {}, pc: 0x0000_0EAF},
+            to: {registers: {sp: i32::from_be_bytes([0xDE, 0xAD, 0xBE, 0xAF])}, pc: 0x0000_0EAF},
         );
     }
 
@@ -485,8 +511,31 @@ mod test {
     fn execute_addi() {
         test_execute!(
             Instruction::ADDI{rd: Register::T4, rs1: Register::T1, imm: 42},
-            changes: {t1: 42},
-            to: {t1: 42, t4: 84},
+            changes: {registers: {t1: 42}},
+            to: {registers: {t1: 42, t4: 84}},
+        );
+    }
+
+    #[test]
+    fn execute_slti() {
+        test_execute!(
+            Instruction::SLTI{rd: Register::T4, rs1: Register::T1, imm: 43},
+            changes: {registers: {t1: 42}},
+            to: {registers: {t1: 42, t4: 1}},
+        );
+        test_execute!(
+            Instruction::SLTI{rd: Register::T4, rs1: Register::T1, imm: 42},
+            changes: {registers: {t1: 42, t4: 100}},
+            to: {registers: {t1: 42, t4: 0}},
+        );
+    }
+
+    #[test]
+    fn execute_add() {
+        test_execute!(
+            Instruction::ADD{rd: Register::T3, rs1: Register::T1, rs2: Register::T2},
+            changes: {registers: {t1: 21, t2: 21}},
+            to: {registers: {t1: 21, t2: 21, t3: 42}},
         );
     }
 
@@ -494,8 +543,8 @@ mod test {
     fn execute_sub() {
         test_execute!(
             Instruction::SUB { rd: Register::T3, rs1: Register::T1, rs2: Register::T2, },
-            changes: {t1: 45, t2: 3},
-            to: {t1: 45, t2: 3, t3: 42},
+            changes: {registers: {t1: 45, t2: 3}},
+            to: {registers: {t1: 45, t2: 3, t3: 42}},
         );
     }
 
