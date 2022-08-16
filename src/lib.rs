@@ -494,6 +494,20 @@ mod test {
     }
 
     #[test]
+    fn execute_lui() {
+        test_execute!(
+            Instruction::LUI { rd: Register::S11, imm: 0x2BAAA },
+            changes: {registers: {}},
+            to: {registers: {s11: 0x2BAA_A000}},
+        );
+        test_execute!(
+            Instruction::LUI { rd: Register::S11, imm: 0xDEAD_B },
+            changes: {registers: {}},
+            to: {registers: {s11: i32::from_be_bytes([0xDE, 0xAD, 0xB0, 0x00])}},
+        );
+    }
+
+    #[test]
     fn execute_auipc() {
         test_execute!(
             Instruction::AUIPC { rd: Register::SP, imm: 0x2BAAA },
