@@ -142,6 +142,67 @@ mod test {
     }
 
     #[test]
+    fn execute_not() {
+        test_execute_many!(
+            Instruction::NOT(Register::A5, Register::A6),
+            changes: {registers: {a6: -1}},
+            to: {registers: {a5: 0, a6: -1}},
+        );
+        test_execute_many!(
+            Instruction::NOT(Register::A5, Register::A6),
+            changes: {registers: {a6: 0}},
+            to: {registers: {a5: -1, a6: 0}},
+        );
+        test_execute_many!(
+            Instruction::NOT(Register::A5, Register::A6),
+            changes: {registers: {a6: 42}},
+            to: {registers: {a5: -43, a6: 42}},
+        );
+    }
+
+    #[test]
+    fn execute_neg() {
+        test_execute_many!(
+            Instruction::NEG(Register::S5, Register::S6),
+            changes: {registers: {s6: -1}},
+            to: {registers: {s5: 1, s6: -1}},
+        );
+        test_execute_many!(
+            Instruction::NEG(Register::S5, Register::S6),
+            changes: {registers: {s6: -1}},
+            to: {registers: {s5: 1, s6: -1}},
+        );
+        test_execute_many!(
+            Instruction::NEG(Register::S5, Register::S6),
+            changes: {registers: {s6: 42}},
+            to: {registers: {s5: -42, s6: 42}},
+        );
+        test_execute_many!(
+            Instruction::NEG(Register::S5, Register::S6),
+            changes: {registers: {s6: 0}},
+            to: {registers: {s5: 0, s6: 0}},
+        );
+    }
+
+    #[test]
+    fn execute_mov() {
+        test_execute_many!(
+            Instruction::MOV(Register::T5, Register::T6),
+            changes: {registers: {t6: -1}},
+            to: {registers: {t5: -1, t6: -1}},
+        );
+    }
+
+    #[test]
+    fn execute_nop() {
+        test_execute_many!(
+            Instruction::NOP,
+            changes: {registers: {}},
+            to: {registers: {}},
+        );
+    }
+
+    #[test]
     fn execute_lui() {
         test_execute!(
             Instruction::LUI { rd: Register::S11, imm: 0x2BAAA },

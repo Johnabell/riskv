@@ -88,6 +88,65 @@ impl Instruction {
             )
         }
     }
+
+    /// # Bitwise NOT
+    ///
+    /// Performs a bitwise logical inversion of register rs and places the result in rd.
+    ///
+    /// Note: This pseudo Instruction desugars to `XORI rd, rs, -1`.
+    /// See [ref](https://github.com/riscv-non-isa/riscv-asm-manual/blob/master/riscv-asm.md#-a-listing-of-standard-risc-v-pseudoinstructions).
+    #[allow(non_snake_case)]
+    pub(crate) fn NOT(rd: Register, rs: Register) -> PseudoinstructionMappingIter {
+        PseudoinstructionMappingIter::One(Instruction::XORI {
+            rd,
+            rs1: rs,
+            imm: -1,
+        })
+    }
+
+    /// # Negative
+    ///
+    /// Two compliment negation.
+    ///
+    /// Note: This pseudo Instruction desugars to `SUB rd, x0, rs`.
+    /// See [ref](https://github.com/riscv-non-isa/riscv-asm-manual/blob/master/riscv-asm.md#-a-listing-of-standard-risc-v-pseudoinstructions).
+    #[allow(non_snake_case)]
+    pub(crate) fn NEG(rd: Register, rs: Register) -> PseudoinstructionMappingIter {
+        PseudoinstructionMappingIter::One(Instruction::SUB {
+            rd,
+            rs1: Register::ZERO,
+            rs2: rs,
+        })
+    }
+
+    /// # Move
+    ///
+    /// Move the value in rs to rd.
+    ///
+    /// Note: This pseudo Instruction desugars to `ADDI rd, rs, 0`.
+    /// See [ref](https://github.com/riscv-non-isa/riscv-asm-manual/blob/master/riscv-asm.md#-a-listing-of-standard-risc-v-pseudoinstructions).
+    #[allow(non_snake_case)]
+    pub(crate) fn MOV(rd: Register, rs: Register) -> PseudoinstructionMappingIter {
+        PseudoinstructionMappingIter::One(Instruction::ADDI {
+            rd,
+            rs1: rs,
+            imm: 0,
+        })
+    }
+
+    /// # NOP
+    ///
+    /// This instruction does nothing.
+    ///
+    /// Note: This pseudo Instruction desugars to `ADDI x0, x0, 0`.
+    /// See [ref](https://github.com/riscv-non-isa/riscv-asm-manual/blob/master/riscv-asm.md#-a-listing-of-standard-risc-v-pseudoinstructions).
+    #[allow(non_snake_case)]
+    pub(crate) const NOP: PseudoinstructionMappingIter =
+        PseudoinstructionMappingIter::One(Instruction::ADDI {
+            rd: Register::ZERO,
+            rs1: Register::ZERO,
+            imm: 0,
+        });
 }
 
 fn sign_extend_i12(value: i32) -> i16 {
