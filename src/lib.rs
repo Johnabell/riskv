@@ -1,4 +1,7 @@
+use std::marker::PhantomData;
+
 use instructions::Instruction;
+use integer::AsUnsigned;
 use num::{
     traits::{WrappingAdd, WrappingSub},
     Num,
@@ -88,20 +91,21 @@ where
 }
 
 // TODO consider making an architecture trait capturing RV32I, RV32E, RV64I, RV128I, etc
-pub trait Architecture: Num {}
-impl Architecture for i32 {}
+trait Architecture<Unsigned: Num + PartialOrd>: Num + AsUnsigned<Unsigned> {}
+impl Architecture<u32> for i32 {}
 
 #[derive(Debug, Default, PartialEq, Eq)]
-pub struct Processor<T: Architecture> {
-    registers: Registers<T>,
+struct Processor<Unsigned: Num + PartialOrd, Signed: Architecture<Unsigned>> {
+    registers: Registers<Signed>,
     // Programme Counter
-    pc: T,
-    memory: Vec<T>,
+    pc: Signed,
+    memory: Vec<Signed>,
+    _marker: PhantomData<Unsigned>,
 }
 
-impl<T> Processor<T>
+impl<Unsigned, Signed> Processor<Unsigned, Signed>
 where
-    T: Architecture
+    Signed: Architecture<Unsigned>
         + Copy
         + From<i16>
         + From<i32>
@@ -109,6 +113,7 @@ where
         + WrappingSub
         + PartialOrd
         + From<bool>,
+    Unsigned: Num + PartialOrd,
 {
     /// Executes a single instruction on the processor
     fn execute(&mut self, instruction: Instruction) {
@@ -120,6 +125,10 @@ where
             }
             Instruction::SLTI { rd, rs1, imm } => {
                 self.registers[rd] = (self.registers[rs1] < imm.into()).into()
+            }
+            Instruction::SLTIU { rd, rs1, imm } => {
+                self.registers[rd] =
+                    (self.registers[rs1].as_unsigned() < Signed::from(imm).as_unsigned()).into()
             }
             Instruction::ADD { rd, rs1, rs2 } => {
                 self.registers[rd] = self.registers[rs1].wrapping_add(&self.registers[rs2])
@@ -439,7 +448,7 @@ mod test {
     }
     macro_rules! processor_state {
         (registers: $register_state:tt,  $($detail:ident: $value:expr),* $(,)?) => {
-            Processor::<i32> {
+            Processor::<u32, i32> {
                 registers: register_state!($register_state),
                 $($detail: $value,)*
                 ..Default::default()
@@ -541,6 +550,30 @@ mod test {
             Instruction::SLTI{rd: Register::T4, rs1: Register::T1, imm: 42},
             changes: {registers: {t1: 42, t4: 100}},
             to: {registers: {t1: 42, t4: 0}},
+        );
+        test_execute!(
+            Instruction::SLTI{rd: Register::T4, rs1: Register::T1, imm: -43},
+            changes: {registers: {t1: 42}},
+            to: {registers: {t1: 42, t4: 0}},
+        );
+    }
+
+    #[test]
+    fn execute_sltiu() {
+        test_execute!(
+            Instruction::SLTIU{rd: Register::T4, rs1: Register::T1, imm: 43},
+            changes: {registers: {t1: 42}},
+            to: {registers: {t1: 42, t4: 1}},
+        );
+        test_execute!(
+            Instruction::SLTIU{rd: Register::T4, rs1: Register::T1, imm: 42},
+            changes: {registers: {t1: 42, t4: 100}},
+            to: {registers: {t1: 42, t4: 0}},
+        );
+        test_execute!(
+            Instruction::SLTIU{rd: Register::T4, rs1: Register::T1, imm: -43},
+            changes: {registers: {t1: 42}},
+            to: {registers: {t1: 42, t4: 1}},
         );
     }
 

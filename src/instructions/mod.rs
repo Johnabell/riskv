@@ -23,49 +23,75 @@ pub(super) enum Instruction {
     /// Build 32-bit constants and uses the U-type format. LUI places the U-immediate value in the
     /// top 20 bits of the destination register rd, filling in the lowest 12 bits with zeros.
     ///
-    /// rd <- sext(immediate[31:12] << 12)
+    /// `rd <- sext(immediate[31:12] << 12)`
     LUI { rd: Register, imm: i32 },
 
-    /// Add upper immediate to programme counter
+    /// # Add upper immediate to programme counter
     ///
     /// Build pc-relative addresses and uses the U-type format. AUIPC forms a 32-bit offset from
     /// the 20-bit U-immediate, filling in the lowest 12 bits with zeros, adds this offset to the
     /// pc, then places the result in register rd.
     ///
-    /// rd = pc + sext(immediate[31:12] << 12)
+    /// `rd <- pc + sext(immediate[31:12] << 12)`
     AUIPC { rd: Register, imm: i32 },
 
-    /// Integer ADD immediate instruction to take the value in `rs1` and add `imm`
-    /// placing the output in `rd`
-    /// rd <- rs1 + rs2
+    /// # Add Immediate
+    ///
+    /// Adds the sign-extended 12-bit immediate to register rs1. Arithmetic overflow is ignored and
+    /// the result is simply the low XLEN bits of the result. ADDI rd, rs1, 0 is used to implement
+    /// the MV rd, rs1 assembler pseudo-instruction.
+    ///
+    /// `rd <- rs1 + rs2`
     ADDI {
         rd: Register,
         rs1: Register,
         imm: i16,
     },
 
-    /// Set Less Than Immediate
+    /// # Set Less Than Immediate
+    ///
     /// Place the value 1 in register rd if register rs1 is less than the signextended immediate
     /// when both are treated as signed numbers, else 0 is written to rd.
-    /// rd = rs1 <s sext(immediate)
+    ///
+    /// `rd <- rs1 <s sext(immediate)`
     SLTI {
         rd: Register,
         rs1: Register,
         imm: i16,
     },
 
-    /// Integer ADD instruction to add the values in `rs1` and `rs2` and
-    /// place the output in `rd`
-    /// rd <- rs1 + rs2
+    /// # Set Less Than Immediate Unsigned
+    ///
+    /// Place the value 1 in register rd if register rs1 is less than the immediate when both are
+    /// treated as unsigned numbers, else 0 is written to rd.
+    ///
+    /// `rd <- rs1 <u sext(immediate)`
+    SLTIU {
+        rd: Register,
+        rs1: Register,
+        imm: i16,
+    },
+
+    /// # Add
+    ///
+    /// Adds the registers rs1 and rs2 and stores the result in rd.
+    /// Arithmetic overflow is ignored and the result is simply the low XLEN bits of the
+    /// result.
+    ///
+    /// `rd <- rs1 + rs2`
     ADD {
         rd: Register,
         rs1: Register,
         rs2: Register,
     },
 
-    /// Integer SUB instruction to take the value in `rs1` and subtract `rs2`  
+    /// # Subract
+    ///
+    /// Arithmetic overflow is ignored and the result is simply the low XLEN bits of the
+    /// result.
     /// placing the output in `rd`
-    /// rd <- rs1 - rs2
+    ///
+    /// `rd <- rs1 - rs2`
     SUB {
         rd: Register,
         rs1: Register,
@@ -91,6 +117,11 @@ impl From<u32> for Instruction {
                     imm: *ImmI::from(value),
                 },
                 0b_010 => Instruction::SLTI {
+                    rd: *Rd::from(value),
+                    rs1: *Rs1::from(value),
+                    imm: *ImmI::from(value),
+                },
+                0b_011 => Instruction::SLTIU {
                     rd: *Rd::from(value),
                     rs1: *Rs1::from(value),
                     imm: *ImmI::from(value),
@@ -166,6 +197,14 @@ mod test {
                 rd: Register::GP,
                 rs1: Register::TP,
                 imm: 32
+            }
+        );
+        assert_eq!(
+            Instruction::from(u32::from_le(0b_0000011_00000_00100_011_00011_0010011)),
+            Instruction::SLTIU {
+                rd: Register::GP,
+                rs1: Register::TP,
+                imm: 96
             }
         );
         assert_eq!(
