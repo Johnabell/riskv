@@ -61,7 +61,7 @@ impl DoubleEndedIterator for PseudoinstructionMappingIter {
 }
 
 impl Instruction {
-    /// Load Immediate
+    /// # Load Immediate
     ///
     /// Note: This pseudo Instruction desugars to a load upper Immediate
     /// and a add immediate for the lower bits.

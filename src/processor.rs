@@ -1,4 +1,4 @@
-use std::marker::PhantomData;
+use std::{marker::PhantomData, ops::BitXor};
 
 use super::instructions::Instruction;
 use super::integer::AsUnsigned;
@@ -30,7 +30,8 @@ where
         + WrappingAdd
         + WrappingSub
         + PartialOrd
-        + From<bool>,
+        + From<bool>
+        + BitXor<Output = Signed>,
     Unsigned: Num + PartialOrd,
 {
     /// Executes a single instruction on the processor
@@ -47,6 +48,9 @@ where
             Instruction::SLTIU { rd, rs1, imm } => {
                 self.registers[rd] =
                     (self.registers[rs1].as_unsigned() < Signed::from(imm).as_unsigned()).into()
+            }
+            Instruction::XORI { rd, rs1, imm } => {
+                self.registers[rd] = self.registers[rs1] ^ (imm.into())
             }
             Instruction::ADD { rd, rs1, rs2 } => {
                 self.registers[rd] = self.registers[rs1].wrapping_add(&self.registers[rs2])
@@ -119,7 +123,7 @@ mod test {
     }
 
     #[test]
-    fn execute_load_immediate() {
+    fn execute_li() {
         for i in [
             0,
             i12::MIN as i32,
@@ -209,6 +213,20 @@ mod test {
             Instruction::SLTIU{rd: Register::T4, rs1: Register::T1, imm: -43},
             changes: {registers: {t1: 42}},
             to: {registers: {t1: 42, t4: 1}},
+        );
+    }
+
+    #[test]
+    fn execute_xori() {
+        test_execute!(
+            Instruction::XORI{rd: Register::A0, rs1: Register::A1, imm: -1},
+            changes: {registers: {a1: 42}},
+            to: {registers: {a0: !(42), a1: 42}},
+        );
+        test_execute!(
+            Instruction::XORI{rd: Register::A2, rs1: Register::A3, imm: 1},
+            changes: {registers: {a3: 2}},
+            to: {registers: {a2: 3, a3: 2}},
         );
     }
 

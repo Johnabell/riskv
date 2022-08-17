@@ -18,7 +18,7 @@ use crate::registers::Register;
 #[cfg_attr(test, derive(Debug, PartialEq, Eq))]
 #[derive(Clone, Copy)]
 pub(super) enum Instruction {
-    /// Load Upper Immediate
+    /// # Load Upper Immediate
     ///
     /// Build 32-bit constants and uses the U-type format. LUI places the U-immediate value in the
     /// top 20 bits of the destination register rd, filling in the lowest 12 bits with zeros.
@@ -67,6 +67,21 @@ pub(super) enum Instruction {
     ///
     /// `rd <- rs1 <u sext(immediate)`
     SLTIU {
+        rd: Register,
+        rs1: Register,
+        imm: i16,
+    },
+
+    /// # XOR Immediate
+    ///
+    /// Performs bitwise XOR on register rs1 and the sign-extended 12-bit immediate and place the
+    /// result in rd.
+    ///
+    /// Note: "XORI rd, rs1, -1" performs a bitwise logical inversion of register rs1(assembler
+    /// pseudo-instruction NOT rd, rs)
+    ///
+    /// `rd <- rs1 ^ sext(immediate)`
+    XORI {
         rd: Register,
         rs1: Register,
         imm: i16,
@@ -122,6 +137,11 @@ impl From<u32> for Instruction {
                     imm: *ImmI::from(value),
                 },
                 0b_011 => Instruction::SLTIU {
+                    rd: *Rd::from(value),
+                    rs1: *Rs1::from(value),
+                    imm: *ImmI::from(value),
+                },
+                0b_100 => Instruction::XORI {
                     rd: *Rd::from(value),
                     rs1: *Rs1::from(value),
                     imm: *ImmI::from(value),
@@ -205,6 +225,14 @@ mod test {
                 rd: Register::GP,
                 rs1: Register::TP,
                 imm: 96
+            }
+        );
+        assert_eq!(
+            Instruction::from(u32::from_le(0b_1111111_11000_01100_100_01011_0010011)),
+            Instruction::XORI {
+                rd: Register::A1,
+                rs1: Register::A2,
+                imm: -8
             }
         );
         assert_eq!(
