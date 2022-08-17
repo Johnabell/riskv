@@ -10,7 +10,7 @@ mod rs2;
 
 use self::{funct3::Funct3, funct7::Funct7, immi::ImmI, immu::ImmU, rd::Rd, rs1::Rs1, rs2::Rs2};
 
-use super::Register;
+use crate::registers::Register;
 /// An representation of different instructions.
 ///
 /// Would we like to work with the raw bytes of the instructions, or simply provide a mechanism to
@@ -165,7 +165,7 @@ const OPP_MASK: u32 = u32::from_le(0b_0000000_00000_00000_000_00000_1111111);
 
 #[cfg(test)]
 mod test {
-    use crate::{instructions::Instruction, Register};
+    use crate::{instructions::Instruction, registers::Register};
 
     #[test]
     fn from_i32() {

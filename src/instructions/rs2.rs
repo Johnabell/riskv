@@ -1,6 +1,6 @@
 use std::ops::Deref;
 
-use crate::Register;
+use crate::registers::Register;
 
 pub(super) struct Rs2(Register);
 

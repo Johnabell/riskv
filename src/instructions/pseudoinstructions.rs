@@ -1,4 +1,4 @@
-use crate::{integer::i12, Register};
+use crate::{integer::i12, registers::Register};
 
 use super::{immu::ImmU, Instruction};
 
