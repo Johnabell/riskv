@@ -12,31 +12,59 @@ use num::{
 };
 
 // TODO consider making an architecture trait capturing RV32I, RV32E, RV64I, RV128I, etc
-trait Architecture<Unsigned: Num + PartialOrd>: Num + AsUnsigned<Unsigned> {}
+
+trait UnsignedBounds: Num + PartialOrd {}
+
+trait Architecture<Unsigned>:
+    Num
+    + AsUnsigned<Unsigned>
+    + Copy
+    + From<i16>
+    + From<i32>
+    + WrappingAdd
+    + WrappingSub
+    + PartialOrd
+    + From<bool>
+    + BitXor<Output = Self>
+    + BitOr<Output = Self>
+where
+    Unsigned: UnsignedBounds,
+{
+}
+
+impl UnsignedBounds for u32 {}
+
 impl Architecture<u32> for i32 {}
 
 #[derive(Debug, Default, PartialEq, Eq)]
-struct Processor<Unsigned: Num + PartialOrd, Signed: Architecture<Unsigned>> {
+struct Memory<Signed, Unsigned> {
+    _marker1: PhantomData<Signed>,
+    _marker2: PhantomData<Unsigned>,
+}
+
+impl<Signed, Unsigned> Memory<Signed, Unsigned> {
+    /// Get 32 bits of memory
+    fn get_word(&self, location: Unsigned) -> Signed {
+        todo!()
+    }
+}
+
+#[derive(Debug, Default, PartialEq, Eq)]
+struct Processor<Signed: Architecture<Unsigned>, Unsigned>
+where
+    Signed: Architecture<Unsigned>,
+    Unsigned: UnsignedBounds,
+{
     registers: Registers<Signed>,
     // Programme Counter
     pc: Signed,
-    memory: Vec<Signed>,
-    _marker: PhantomData<Unsigned>,
+    memory: Memory<Signed, Unsigned>,
 }
 
-impl<Unsigned, Signed> Processor<Unsigned, Signed>
+impl<Signed, Unsigned> Processor<Signed, Unsigned>
 where
-    Signed: Architecture<Unsigned>
-        + Copy
-        + From<i16>
-        + From<i32>
-        + WrappingAdd
-        + WrappingSub
-        + PartialOrd
-        + From<bool>
-        + BitXor<Output = Signed>
-        + BitOr<Output = Signed>,
-    Unsigned: Num + PartialOrd,
+    Signed: Architecture<Unsigned>,
+    Unsigned: UnsignedBounds,
 {
     /// Executes a single instruction on the processor
     fn execute(&mut self, instruction: Instruction) {
@@ -94,7 +122,7 @@ mod test {
     }
     macro_rules! processor_state {
         (registers: $register_state:tt,  $($detail:ident: $value:expr),* $(,)?) => {
-            Processor::<u32, i32> {
+            Processor::<i32, u32> {
                 registers: register_state!($register_state),
                 $($detail: $value,)*
                 ..Default::default()
