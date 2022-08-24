@@ -87,6 +87,17 @@ pub(super) enum Instruction {
         imm: i16,
     },
 
+    /// OR Immediate
+    ///
+    /// Performs bitwise OR on register rs1 and the sign-extended 12-bit immediate and place the result in rd
+    ///
+    /// `rd <- rs1 | sext(immediate)`
+    ORI {
+        rd: Register,
+        rs1: Register,
+        imm: i16,
+    },
+
     /// # Add
     ///
     /// Adds the registers rs1 and rs2 and stores the result in rd.
@@ -142,6 +153,11 @@ impl From<u32> for Instruction {
                     imm: *ImmI::from(value),
                 },
                 0b_100 => Instruction::XORI {
+                    rd: *Rd::from(value),
+                    rs1: *Rs1::from(value),
+                    imm: *ImmI::from(value),
+                },
+                0b_110 => Instruction::ORI {
                     rd: *Rd::from(value),
                     rs1: *Rs1::from(value),
                     imm: *ImmI::from(value),
@@ -233,6 +249,14 @@ mod test {
                 rd: Register::A1,
                 rs1: Register::A2,
                 imm: -8
+            }
+        );
+        assert_eq!(
+            Instruction::from(u32::from_le(0b_1111111_01000_01101_110_10011_0010011)),
+            Instruction::ORI {
+                rd: Register::S3,
+                rs1: Register::A3,
+                imm: -24
             }
         );
         assert_eq!(

@@ -1,4 +1,7 @@
-use std::{marker::PhantomData, ops::BitXor};
+use std::{
+    marker::PhantomData,
+    ops::{BitOr, BitXor},
+};
 
 use super::instructions::Instruction;
 use super::integer::AsUnsigned;
@@ -31,7 +34,8 @@ where
         + WrappingSub
         + PartialOrd
         + From<bool>
-        + BitXor<Output = Signed>,
+        + BitXor<Output = Signed>
+        + BitOr<Output = Signed>,
     Unsigned: Num + PartialOrd,
 {
     /// Executes a single instruction on the processor
@@ -51,6 +55,9 @@ where
             }
             Instruction::XORI { rd, rs1, imm } => {
                 self.registers[rd] = self.registers[rs1] ^ (imm.into())
+            }
+            Instruction::ORI { rd, rs1, imm } => {
+                self.registers[rd] = self.registers[rs1] | (imm.into())
             }
             Instruction::ADD { rd, rs1, rs2 } => {
                 self.registers[rd] = self.registers[rs1].wrapping_add(&self.registers[rs2])
@@ -288,6 +295,30 @@ mod test {
             Instruction::XORI{rd: Register::A2, rs1: Register::A3, imm: 1},
             changes: {registers: {a3: 2}},
             to: {registers: {a2: 3, a3: 2}},
+        );
+    }
+
+    #[test]
+    fn execute_ori() {
+        test_execute!(
+            Instruction::ORI{rd: Register::S0, rs1: Register::S1, imm: -1},
+            changes: {registers: {s1: 42}},
+            to: {registers: {s0: -1, s1: 42}},
+        );
+        test_execute!(
+            Instruction::ORI{rd: Register::S2, rs1: Register::S3, imm: 2},
+            changes: {registers: {s3: 2}},
+            to: {registers: {s2: 2, s3: 2}},
+        );
+        test_execute!(
+            Instruction::ORI{rd: Register::S4, rs1: Register::S5, imm: 8},
+            changes: {registers: {s5: 3}},
+            to: {registers: {s4: 11, s5: 3}},
+        );
+        test_execute!(
+            Instruction::ORI{rd: Register::S4, rs1: Register::S5, imm: 7},
+            changes: {registers: {s5: 19}},
+            to: {registers: {s4: 23, s5: 19}},
         );
     }
 
