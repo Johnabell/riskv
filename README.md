@@ -7,7 +7,7 @@ A RISC-V interpreter written in Rust.
 This project is in early stages and it primarily being embarked upon as a learning exercise.
 Feel free to contribute and get involved if you would like to learn more about assembly and RISC-V.
 
-## Provitional plan
+## Provisional plan
 
 - Implement basic model of the processor, instructions, stack and heap (based on a useful subset of all the instructions)
 - Implement a parser for RISC-V assembly files
@@ -29,9 +29,12 @@ Currently the moderation team consists of John Bell only. We would welcome more 
 The project is licensed under the [GNU General Public License v3.0](https://github.com/Johnabell/riskv/blob/master/LICENSE).
 
 ## Useful links
+
 - [RISC-V assembly for beginers](https://medium.com/swlh/risc-v-assembly-for-beginners-387c6cd02c49)
 - [RISC-V instruction set cheatsheet](https://itnext.io/risc-v-instruction-set-cheatsheet-70961b4bbe8)
 - [RISC-V assembly course](https://web.eecs.utk.edu/~smarz1/courses/ece356/notes/assembly/)
 - [RISC-V examples](https://github.com/takenobu-hs/cpu-assembly-examples/tree/master/riscv/linux)
-- [RISC-V Assembly Programmer's Manual](https://github.com/riscv-non-isa/riscv-asm-manual/blob/master/riscv-asm.md)- - [RISC-V Visual Emulator](https://eseo-tech.github.io/emulsiV/)
+- [RISC-V Assembly Programmer's Manual](https://github.com/riscv-non-isa/riscv-asm-manual/blob/master/riscv-asm.md)
+- [RISC-V Visual Emulator](https://eseo-tech.github.io/emulsiV/)
 - [RISC-V Instructions reference](https://msyksphinz-self.github.io/riscv-isadoc/html/rvi.html)
+- [The RISC-V Instruction Set Manual Volume I: Unprivileged ISA (pdf)](https://github.com/riscv/riscv-isa-manual/releases/download/Ratified-IMAFDQC/riscv-spec-20191213.pdf)
