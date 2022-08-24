@@ -204,7 +204,7 @@ mod test {
     use crate::{instructions::Instruction, registers::Register};
 
     #[test]
-    fn from_i32() {
+    fn lui_from_i32() {
         assert_eq!(
             Instruction::from(u32::from_le(0b_0100100_01010_01100_101_11000_0110111)),
             Instruction::LUI {
@@ -212,6 +212,10 @@ mod test {
                 imm: 0x48A65
             }
         );
+    }
+
+    #[test]
+    fn auipc_from_i32() {
         assert_eq!(
             Instruction::from(u32::from_le(0b_0100100_01010_01100_111_11100_0010111)),
             Instruction::AUIPC {
@@ -219,6 +223,10 @@ mod test {
                 imm: 0x48A67
             }
         );
+    }
+
+    #[test]
+    fn addi_from_i32() {
         assert_eq!(
             Instruction::from(u32::from_le(0b_0000001_00000_00000_000_00001_0010011)),
             Instruction::ADDI {
@@ -227,6 +235,10 @@ mod test {
                 imm: 32
             }
         );
+    }
+
+    #[test]
+    fn slti_from_i32() {
         assert_eq!(
             Instruction::from(u32::from_le(0b_0000001_00000_00100_010_00011_0010011)),
             Instruction::SLTI {
@@ -235,6 +247,10 @@ mod test {
                 imm: 32
             }
         );
+    }
+
+    #[test]
+    fn sltiu_from_i32() {
         assert_eq!(
             Instruction::from(u32::from_le(0b_0000011_00000_00100_011_00011_0010011)),
             Instruction::SLTIU {
@@ -243,6 +259,10 @@ mod test {
                 imm: 96
             }
         );
+    }
+
+    #[test]
+    fn xori_from_i32() {
         assert_eq!(
             Instruction::from(u32::from_le(0b_1111111_11000_01100_100_01011_0010011)),
             Instruction::XORI {
@@ -251,6 +271,10 @@ mod test {
                 imm: -8
             }
         );
+    }
+
+    #[test]
+    fn ori_from_i32() {
         assert_eq!(
             Instruction::from(u32::from_le(0b_1111111_01000_01101_110_10011_0010011)),
             Instruction::ORI {
@@ -259,6 +283,10 @@ mod test {
                 imm: -24
             }
         );
+    }
+
+    #[test]
+    fn add_from_i32() {
         assert_eq!(
             Instruction::from(u32::from_le(0b_0000000_01101_01011_000_00010_0110011)),
             Instruction::ADD {
@@ -267,6 +295,10 @@ mod test {
                 rs2: Register::A3,
             }
         );
+    }
+
+    #[test]
+    fn sub_from_i32() {
         assert_eq!(
             Instruction::from(u32::from_le(0b_0100000_11101_11011_000_00010_0110011)),
             Instruction::SUB {
