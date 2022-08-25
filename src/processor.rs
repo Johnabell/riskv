@@ -1,19 +1,17 @@
-use std::{
-    marker::PhantomData,
-    ops::{BitOr, BitXor},
-};
-
-use super::instructions::Instruction;
-use super::integer::AsUnsigned;
-use super::registers::Registers;
 use num::{
     traits::{WrappingAdd, WrappingSub},
     Num,
 };
+use std::ops::{BitOr, BitXor};
+
+use crate::instructions::Instruction;
+use crate::integer::{AsIndex, AsUnsigned};
+use crate::memory::Memory;
+use crate::registers::Registers;
 
 // TODO consider making an architecture trait capturing RV32I, RV32E, RV64I, RV128I, etc
 
-trait UnsignedBounds: Num + PartialOrd {}
+trait UnsignedBounds: Num + PartialOrd + AsIndex {}
 
 trait Architecture<Unsigned>:
     Num
@@ -35,19 +33,6 @@ where
 impl UnsignedBounds for u32 {}
 
 impl Architecture<u32> for i32 {}
-
-#[derive(Debug, Default, PartialEq, Eq)]
-struct Memory<Signed, Unsigned> {
-    _marker1: PhantomData<Signed>,
-    _marker2: PhantomData<Unsigned>,
-}
-
-impl<Signed, Unsigned> Memory<Signed, Unsigned> {
-    /// Get 32 bits of memory
-    fn get_word(&self, location: Unsigned) -> Signed {
-        todo!()
-    }
-}
 
 #[derive(Debug, Default, PartialEq, Eq)]
 struct Processor<Signed: Architecture<Unsigned>, Unsigned>
@@ -93,6 +78,13 @@ where
             Instruction::SUB { rd, rs1, rs2 } => {
                 self.registers[rd] = self.registers[rs1].wrapping_sub(&self.registers[rs2])
             }
+            Instruction::LW { rd, rs1, offset } => {
+                self.registers[rd] = self.memory.load_word(
+                    self.registers[rs1]
+                        .wrapping_add(&offset.into())
+                        .as_unsigned(),
+                )
+            }
         }
     }
 
@@ -120,16 +112,47 @@ mod test {
             register_state!($($register: $value,)*)
         };
     }
-    macro_rules! processor_state {
-        (registers: $register_state:tt,  $($detail:ident: $value:expr),* $(,)?) => {
-            Processor::<i32, u32> {
-                registers: register_state!($register_state),
-                $($detail: $value,)*
-                ..Default::default()
+    macro_rules! memory_state {
+        ($($location:literal: $value:expr),* $(,)?) => {
+            {
+                let mut mem = Memory::<i32, u32>::default();
+                $(
+                    mem.store_word($location, $value);
+                )*
+                mem
             }
         };
-        ({registers: $register_state:tt $(,)? $($detail:ident: $value:expr),* $(,)?}) => {
-            processor_state!(registers: $register_state, $($detail: $value,)*)
+        ({$($location:literal: $value:expr),* $(,)?}) => {
+            memory_state!($($location: $value,)*)
+        };
+    }
+    macro_rules! processor_state {
+        (
+            registers: $register_state:tt
+            $(, memory: $memory_state:tt)?
+            $(, pc: $program_counter1:expr)?
+            $(,)?
+        ) => {
+            Processor::<i32, u32> {
+                registers: register_state!($register_state)
+                $(, memory: memory_state!($memory_state))?
+                $(, pc: $program_counter1)?
+                , ..Default::default()
+            }
+        };
+        (
+            {
+                registers: $register_state:tt
+                $(, memory: $memory_state:tt)?
+                $(, pc: $program_counter2:expr)?
+                $(,)?
+            }
+        ) => {
+            processor_state!(
+                registers: $register_state
+                $(, memory: $memory_state)?
+                $(, pc: $program_counter2)?
+            )
         };
     }
     macro_rules! test_execute {
@@ -365,6 +388,15 @@ mod test {
             Instruction::SUB { rd: Register::T3, rs1: Register::T1, rs2: Register::T2, },
             changes: {registers: {t1: 45, t2: 3}},
             to: {registers: {t1: 45, t2: 3, t3: 42}},
+        );
+    }
+
+    #[test]
+    fn execute_lw() {
+        test_execute!(
+            Instruction::LW { rd: Register::T3, rs1: Register::T1, offset: 31, },
+            changes: {registers: {t1: 3}, memory: {34: 12}},
+            to: {registers: {t1: 3, t3: 12}, memory: {34: 12}},
         );
     }
 }
