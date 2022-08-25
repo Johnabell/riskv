@@ -22,7 +22,12 @@ Feel free to contribute and get involved if you would like to learn more about a
 
 We follow the [Rust code of conduct](https://www.rust-lang.org/policies/code-of-conduct).
 
-Currently the moderation team consists of John Bell only. We would welcome more members: if you would like to join the moderation team, please contact John Bell.
+The moderation team consists of:
+
+* John Bell (@johnabell)
+* Andy Balaam (@andybalaam)
+
+We welcome more members: if you would like to join the moderation team, please contact John Bell.
 
 ## Licence
 
