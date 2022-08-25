@@ -2,7 +2,7 @@ use num::{
     traits::{WrappingAdd, WrappingSub},
     Num,
 };
-use std::ops::{BitOr, BitXor};
+use std::ops::{BitAnd, BitOr, BitXor};
 
 use crate::instructions::Instruction;
 use crate::integer::{AsIndex, AsUnsigned};
@@ -25,6 +25,7 @@ trait Architecture<Unsigned>:
     + From<bool>
     + BitXor<Output = Self>
     + BitOr<Output = Self>
+    + BitAnd<Output = Self>
 where
     Unsigned: UnsignedBounds,
 {
@@ -71,6 +72,9 @@ where
             }
             Instruction::ORI { rd, rs1, imm } => {
                 self.registers[rd] = self.registers[rs1] | (imm.into())
+            }
+            Instruction::ANDI { rd, rs1, imm } => {
+                self.registers[rd] = self.registers[rs1] & (imm.into())
             }
             Instruction::ADD { rd, rs1, rs2 } => {
                 self.registers[rd] = self.registers[rs1].wrapping_add(&self.registers[rs2])
@@ -370,6 +374,30 @@ mod test {
             Instruction::ORI{rd: Register::S4, rs1: Register::S5, imm: 7},
             changes: {registers: {s5: 19}},
             to: {registers: {s4: 23, s5: 19}},
+        );
+    }
+
+    #[test]
+    fn execute_andi() {
+        test_execute!(
+            Instruction::ANDI{rd: Register::S0, rs1: Register::S1, imm: -1},
+            changes: {registers: {s1: 42}},
+            to: {registers: {s0: 42, s1: 42}},
+        );
+        test_execute!(
+            Instruction::ANDI{rd: Register::S2, rs1: Register::S3, imm: 2},
+            changes: {registers: {s3: 2}},
+            to: {registers: {s2: 2, s3: 2}},
+        );
+        test_execute!(
+            Instruction::ANDI{rd: Register::S4, rs1: Register::S5, imm: 8},
+            changes: {registers: {s5: 3}},
+            to: {registers: {s4: 0, s5: 3}},
+        );
+        test_execute!(
+            Instruction::ANDI{rd: Register::S4, rs1: Register::S5, imm: 7},
+            changes: {registers: {s5: 19}},
+            to: {registers: {s4: 3, s5: 19}},
         );
     }
 
