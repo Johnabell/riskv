@@ -123,6 +123,18 @@ pub(super) enum Instruction {
         rs1: Register,
         rs2: Register,
     },
+
+    /// # Load Word
+    ///
+    /// Loads a 32-bit value from memory and sign-extends this to XLEN bits before storing it in
+    /// register rd.
+    ///
+    /// `rd <- sext(M[rs1 + sext(offset)][31:0])`
+    LW {
+        rd: Register,
+        rs1: Register,
+        offset: i16,
+    },
 }
 
 impl From<u32> for Instruction {
@@ -177,6 +189,17 @@ impl From<u32> for Instruction {
                     rd: *Rd::from(value),
                     rs1: *Rs1::from(value),
                     rs2: *Rs2::from(value),
+                },
+                _ => unimplemented!(
+                    "The given instruction is not yet implemented {:#034b}",
+                    value.to_le()
+                ),
+            },
+            0b_0000011 => match *Funct3::from(value) {
+                0b_010 => Instruction::LW {
+                    rd: *Rd::from(value),
+                    rs1: *Rs1::from(value),
+                    offset: *ImmI::from(value),
                 },
                 _ => unimplemented!(
                     "The given instruction is not yet implemented {:#034b}",
@@ -305,6 +328,18 @@ mod test {
                 rd: Register::SP,
                 rs1: Register::S11,
                 rs2: Register::T4,
+            }
+        );
+    }
+
+    #[test]
+    fn lw_from_i32() {
+        assert_eq!(
+            Instruction::from(u32::from_le(0b_0000001_11000_01100_010_11100_0000011)),
+            Instruction::LW {
+                rd: Register::T3,
+                rs1: Register::A2,
+                offset: 56,
             }
         );
     }
