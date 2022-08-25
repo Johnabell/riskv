@@ -31,7 +31,8 @@ We welcome more members: if you would like to join the moderation team, please c
 
 ## Licence
 
-The project is licensed under the [GNU General Public License v3.0](https://github.com/Johnabell/riskv/blob/master/LICENSE).
+The project is licensed under the#
+[GNU Affero General Public License v3.0](https://github.com/Johnabell/riskv/blob/master/LICENSE).
 
 ## Useful links
 
