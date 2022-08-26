@@ -1,5 +1,6 @@
 #![allow(clippy::unusual_byte_groupings, clippy::upper_case_acronyms)]
 mod funct3;
+mod funct6;
 mod funct7;
 mod immi;
 mod immu;
@@ -7,8 +8,12 @@ mod pseudoinstructions;
 mod rd;
 mod rs1;
 mod rs2;
+mod shamt;
 
-use self::{funct3::Funct3, funct7::Funct7, immi::ImmI, immu::ImmU, rd::Rd, rs1::Rs1, rs2::Rs2};
+use self::{
+    funct3::Funct3, funct6::Funct6, funct7::Funct7, immi::ImmI, immu::ImmU, rd::Rd, rs1::Rs1,
+    rs2::Rs2, shamt::Shamt,
+};
 
 use crate::registers::Register;
 /// An representation of different instructions.
@@ -87,7 +92,7 @@ pub(super) enum Instruction {
         imm: i16,
     },
 
-    /// OR Immediate
+    /// # OR Immediate
     ///
     /// Performs bitwise OR on register rs1 and the sign-extended 12-bit immediate and place the result in rd
     ///
@@ -98,7 +103,7 @@ pub(super) enum Instruction {
         imm: i16,
     },
 
-    /// AND Immediate
+    /// # AND Immediate
     ///
     /// Performs bitwise OR on register rs1 and the sign-extended 12-bit immediate and place the
     /// result in rd
@@ -108,6 +113,45 @@ pub(super) enum Instruction {
         rd: Register,
         rs1: Register,
         imm: i16,
+    },
+
+    /// # Shift Logical Left Immediate
+    ///
+    /// Performs logical left shift on the value in register rs1 by the shift amount held in the
+    /// lower 5 bits of the immediate
+    /// In RV64, bit-25 is used to shamt[5].
+    ///
+    /// `rd <- rs1 << shamt`
+    SLLI {
+        rd: Register,
+        rs1: Register,
+        shamt: u8,
+    },
+
+    /// # Shift Logical Right Immediate
+    ///
+    /// Performs logical right shift on the value in register rs1 by the shift amount held in the
+    /// lower 5 bits of the immediate
+    /// In RV64, bit-25 is used to shamt[5].
+    ///
+    /// `rd <- rs1 >>u shamt`
+    SRLI {
+        rd: Register,
+        rs1: Register,
+        shamt: u8,
+    },
+
+    /// # Shift Arithmetic Right Immediate
+    ///
+    /// Performs arithmetic right shift on the value in register rs1 by the shift amount held in
+    /// the lower 5 bits of the immediate
+    /// In RV64, bit-25 is used to shamt[5].
+    ///
+    /// `rd <- rs1 >>s shamt`
+    SRAI {
+        rd: Register,
+        rs1: Register,
+        shamt: u8,
     },
 
     /// # Add
@@ -166,6 +210,11 @@ impl From<u32> for Instruction {
                     rs1: *Rs1::from(value),
                     imm: *ImmI::from(value),
                 },
+                0b_001 => Instruction::SLLI {
+                    rd: *Rd::from(value),
+                    rs1: *Rs1::from(value),
+                    shamt: *Shamt::from(value),
+                },
                 0b_010 => Instruction::SLTI {
                     rd: *Rd::from(value),
                     rs1: *Rs1::from(value),
@@ -180,6 +229,22 @@ impl From<u32> for Instruction {
                     rd: *Rd::from(value),
                     rs1: *Rs1::from(value),
                     imm: *ImmI::from(value),
+                },
+                0b_101 => match *Funct6::from(value) {
+                    0b_000000 => Instruction::SRLI {
+                        rd: *Rd::from(value),
+                        rs1: *Rs1::from(value),
+                        shamt: *Shamt::from(value),
+                    },
+                    0b_010000 => Instruction::SRAI {
+                        rd: *Rd::from(value),
+                        rs1: *Rs1::from(value),
+                        shamt: *Shamt::from(value),
+                    },
+                    _ => unimplemented!(
+                        "The given instruction is not yet implemented {:#034b}",
+                        value.to_le()
+                    ),
                 },
                 0b_110 => Instruction::ORI {
                     rd: *Rd::from(value),
@@ -333,6 +398,42 @@ mod test {
                 rd: Register::A5,
                 rs1: Register::T3,
                 imm: 72
+            }
+        );
+    }
+
+    #[test]
+    fn slli_from_i32() {
+        assert_eq!(
+            Instruction::from(u32::from_le(0b_0000000_01010_10010_001_01101_0010011)),
+            Instruction::SLLI {
+                rd: Register::A3,
+                rs1: Register::S2,
+                shamt: 10
+            }
+        );
+    }
+
+    #[test]
+    fn srli_from_i32() {
+        assert_eq!(
+            Instruction::from(u32::from_le(0b_0000001_01010_10011_101_01110_0010011)),
+            Instruction::SRLI {
+                rd: Register::A4,
+                rs1: Register::S3,
+                shamt: 42
+            }
+        );
+    }
+
+    #[test]
+    fn srai_from_i32() {
+        assert_eq!(
+            Instruction::from(u32::from_le(0b_0100000_11010_10100_101_10000_0010011)),
+            Instruction::SRAI {
+                rd: Register::A6,
+                rs1: Register::S4,
+                shamt: 26
             }
         );
     }
