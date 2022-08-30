@@ -98,11 +98,11 @@ where
             }
             Instruction::SLT { rd, rs1, rs2 } => {
                 self.registers[rd] = (self.registers[rs1] < self.registers[rs2]).into()
-            },
+            }
             Instruction::SLTU { rd, rs1, rs2 } => {
                 self.registers[rd] =
                     (self.registers[rs1].as_unsigned() < self.registers[rs2].as_unsigned()).into()
-            },
+            }
             Instruction::LW { rd, rs1, offset } => {
                 self.registers[rd] = self.memory.load_word(
                     self.registers[rs1]
@@ -292,6 +292,63 @@ mod test {
             Instruction::SEQZ(Register::A3, Register::A1),
             changes: {registers: {a1: 1}},
             to: {registers: {a1: 1, a3: 0}},
+        );
+    }
+
+    #[test]
+    fn execute_snez() {
+        test_execute_many!(
+            Instruction::SNEZ(Register::A3, Register::A1),
+            changes: {registers: {a1: -1}},
+            to: {registers: {a1: -1, a3: 1}},
+        );
+        test_execute_many!(
+            Instruction::SNEZ(Register::A3, Register::A1),
+            changes: {registers: {a1: 0}},
+            to: {registers: {a1: 0, a3: 0}},
+        );
+        test_execute_many!(
+            Instruction::SNEZ(Register::A3, Register::A1),
+            changes: {registers: {a1: 1}},
+            to: {registers: {a1: 1, a3: 1}},
+        );
+    }
+
+    #[test]
+    fn execute_sltz() {
+        test_execute_many!(
+            Instruction::SLTZ(Register::A3, Register::A1),
+            changes: {registers: {a1: -1}},
+            to: {registers: {a1: -1, a3: 1}},
+        );
+        test_execute_many!(
+            Instruction::SLTZ(Register::A3, Register::A1),
+            changes: {registers: {a1: 0}},
+            to: {registers: {a1: 0, a3: 0}},
+        );
+        test_execute_many!(
+            Instruction::SLTZ(Register::A3, Register::A1),
+            changes: {registers: {a1: 1}},
+            to: {registers: {a1: 1, a3: 0}},
+        );
+    }
+
+    #[test]
+    fn execute_sgtz() {
+        test_execute_many!(
+            Instruction::SGLZ(Register::A3, Register::A1),
+            changes: {registers: {a1: -1}},
+            to: {registers: {a1: -1, a3: 0}},
+        );
+        test_execute_many!(
+            Instruction::SGLZ(Register::A3, Register::A1),
+            changes: {registers: {a1: 0}},
+            to: {registers: {a1: 0, a3: 0}},
+        );
+        test_execute_many!(
+            Instruction::SGLZ(Register::A3, Register::A1),
+            changes: {registers: {a1: 1}},
+            to: {registers: {a1: 1, a3: 1}},
         );
     }
 
