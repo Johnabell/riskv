@@ -96,6 +96,13 @@ where
             Instruction::SUB { rd, rs1, rs2 } => {
                 self.registers[rd] = self.registers[rs1].wrapping_sub(&self.registers[rs2])
             }
+            Instruction::SLT { rd, rs1, rs2 } => {
+                self.registers[rd] = (self.registers[rs1] < self.registers[rs2]).into()
+            },
+            Instruction::SLTU { rd, rs1, rs2 } => {
+                self.registers[rd] =
+                    (self.registers[rs1].as_unsigned() < self.registers[rs2].as_unsigned()).into()
+            },
             Instruction::LW { rd, rs1, offset } => {
                 self.registers[rd] = self.memory.load_word(
                     self.registers[rs1]
@@ -541,6 +548,54 @@ mod test {
             Instruction::SUB { rd: Register::T3, rs1: Register::T1, rs2: Register::T2, },
             changes: {registers: {t1: 45, t2: 3}},
             to: {registers: {t1: 45, t2: 3, t3: 42}},
+        );
+    }
+
+    #[test]
+    fn execute_slt() {
+        test_execute!(
+            Instruction::SLT{rd: Register::T4, rs1: Register::T1, rs2: Register::T3},
+            changes: {registers: {t1: 42, t3: 43}},
+            to: {registers: {t1: 42, t4: 1, t3: 43}},
+        );
+        test_execute!(
+            Instruction::SLT{rd: Register::T4, rs1: Register::T1, rs2: Register::T3},
+            changes: {registers: {t1: 42, t4: 100, t3: 42}},
+            to: {registers: {t1: 42, t4: 0, t3: 42}},
+        );
+        test_execute!(
+            Instruction::SLT{rd: Register::T4, rs1: Register::T1, rs2: Register::T3},
+            changes: {registers: {t1: 42, t3: -43}},
+            to: {registers: {t1: 42, t4: 0, t3: -43}},
+        );
+    }
+
+    #[test]
+    fn execute_sltu() {
+        test_execute!(
+            Instruction::SLTU{rd: Register::T4, rs1: Register::T1, rs2: Register::A4},
+            changes: {registers: {t1: 42, a4: 43}},
+            to: {registers: {t1: 42, t4: 1, a4: 43}},
+        );
+        test_execute!(
+            Instruction::SLTU{rd: Register::T4, rs1: Register::T1, rs2: Register::A4},
+            changes: {registers: {t1: 42, t4: 100, a4: 42}},
+            to: {registers: {t1: 42, t4: 0, a4: 42}},
+        );
+        test_execute!(
+            Instruction::SLTU{rd: Register::T4, rs1: Register::T1, rs2: Register::A4},
+            changes: {registers: {t1: 42, a4: -43}},
+            to: {registers: {t1: 42, t4: 1, a4: -43}},
+        );
+        test_execute!(
+            Instruction::SLTU{rd: Register::T4, rs1: Register::T1, rs2: Register::A4},
+            changes: {registers: {t1: 42, a4: 1}},
+            to: {registers: {t1: 42, t4: 0, a4: 1}},
+        );
+        test_execute!(
+            Instruction::SLTU{rd: Register::T4, rs1: Register::T1, rs2: Register::A4},
+            changes: {registers: {t1: 0, a4: 1}},
+            to: {registers: {t1: 0, t4: 1, a4: 1}},
         );
     }
 
