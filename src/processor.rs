@@ -270,6 +270,25 @@ mod test {
     }
 
     #[test]
+    fn execute_seqz() {
+        test_execute_many!(
+            Instruction::SEQZ(Register::A3, Register::A1),
+            changes: {registers: {a1: -1}},
+            to: {registers: {a1: -1, a3: 0}},
+        );
+        test_execute_many!(
+            Instruction::SEQZ(Register::A3, Register::A1),
+            changes: {registers: {a1: 0}},
+            to: {registers: {a1: 0, a3: 1}},
+        );
+        test_execute_many!(
+            Instruction::SEQZ(Register::A3, Register::A1),
+            changes: {registers: {a1: 1}},
+            to: {registers: {a1: 1, a3: 0}},
+        );
+    }
+
+    #[test]
     fn execute_nop() {
         test_execute_many!(
             Instruction::NOP,
@@ -350,6 +369,16 @@ mod test {
             Instruction::SLTIU{rd: Register::T4, rs1: Register::T1, imm: -43},
             changes: {registers: {t1: 42}},
             to: {registers: {t1: 42, t4: 1}},
+        );
+        test_execute!(
+            Instruction::SLTIU{rd: Register::T4, rs1: Register::T1, imm: 1},
+            changes: {registers: {t1: 42}},
+            to: {registers: {t1: 42, t4: 0}},
+        );
+        test_execute!(
+            Instruction::SLTIU{rd: Register::T4, rs1: Register::T1, imm: 1},
+            changes: {registers: {t1: 0}},
+            to: {registers: {t1: 0, t4: 1}},
         );
     }
 

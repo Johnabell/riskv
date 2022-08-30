@@ -63,7 +63,7 @@ impl DoubleEndedIterator for PseudoinstructionMappingIter {
 impl Instruction {
     /// # Load Immediate
     ///
-    /// Note: This pseudo Instruction desugars to a load upper Immediate
+    /// Note: This pseudoinstruction desugars to a load upper Immediate
     /// and a add immediate for the lower bits.
     /// See [ref](https://github.com/riscv-non-isa/riscv-asm-manual/blob/master/riscv-asm.md#load-immediate).
     #[allow(non_snake_case)]
@@ -93,7 +93,7 @@ impl Instruction {
     ///
     /// Performs a bitwise logical inversion of register rs and places the result in rd.
     ///
-    /// Note: This pseudo Instruction desugars to `XORI rd, rs, -1`.
+    /// Note: This pseudoinstruction desugars to `XORI rd, rs, -1`.
     /// See [ref](https://github.com/riscv-non-isa/riscv-asm-manual/blob/master/riscv-asm.md#-a-listing-of-standard-risc-v-pseudoinstructions).
     #[allow(non_snake_case)]
     pub(crate) fn NOT(rd: Register, rs: Register) -> PseudoinstructionMappingIter {
@@ -108,7 +108,7 @@ impl Instruction {
     ///
     /// Two compliment negation.
     ///
-    /// Note: This pseudo Instruction desugars to `SUB rd, x0, rs`.
+    /// Note: This pseudoinstruction desugars to `SUB rd, x0, rs`.
     /// See [ref](https://github.com/riscv-non-isa/riscv-asm-manual/blob/master/riscv-asm.md#-a-listing-of-standard-risc-v-pseudoinstructions).
     #[allow(non_snake_case)]
     pub(crate) fn NEG(rd: Register, rs: Register) -> PseudoinstructionMappingIter {
@@ -123,7 +123,7 @@ impl Instruction {
     ///
     /// Move the value in rs to rd.
     ///
-    /// Note: This pseudo Instruction desugars to `ADDI rd, rs, 0`.
+    /// Note: This pseudoinstruction desugars to `ADDI rd, rs, 0`.
     /// See [ref](https://github.com/riscv-non-isa/riscv-asm-manual/blob/master/riscv-asm.md#-a-listing-of-standard-risc-v-pseudoinstructions).
     #[allow(non_snake_case)]
     pub(crate) fn MOV(rd: Register, rs: Register) -> PseudoinstructionMappingIter {
@@ -134,11 +134,27 @@ impl Instruction {
         })
     }
 
+    /// # Set Equal Zero
+    ///
+    /// Sets the destination register to 1 if `rs` is zero, otherwises set the destination register
+    /// to 1.
+    ///
+    /// Note: This pseudoinstruction desugars to `SLTUI rd, rs, 1`.
+    /// See [ref](https://github.com/riscv-non-isa/riscv-asm-manual/blob/master/riscv-asm.md#-a-listing-of-standard-risc-v-pseudoinstructions).
+    #[allow(non_snake_case)]
+    pub(crate) fn SEQZ(rd: Register, rs: Register) -> PseudoinstructionMappingIter {
+        PseudoinstructionMappingIter::One(Instruction::SLTIU {
+            rd,
+            rs1: rs,
+            imm: 1,
+        })
+    }
+
     /// # NOP
     ///
     /// This instruction does nothing.
     ///
-    /// Note: This pseudo Instruction desugars to `ADDI x0, x0, 0`.
+    /// Note: This pseudoinstruction desugars to `ADDI x0, x0, 0`.
     /// See [ref](https://github.com/riscv-non-isa/riscv-asm-manual/blob/master/riscv-asm.md#-a-listing-of-standard-risc-v-pseudoinstructions).
     #[allow(non_snake_case)]
     pub(crate) const NOP: PseudoinstructionMappingIter =
