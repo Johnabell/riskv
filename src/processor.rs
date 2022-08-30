@@ -2,16 +2,19 @@ use num::{
     traits::{WrappingAdd, WrappingSub},
     Num,
 };
-use std::ops::{BitAnd, BitOr, BitXor};
+use std::ops::{BitAnd, BitOr, BitXor, Shl, Shr};
 
 use crate::instructions::Instruction;
-use crate::integer::{AsIndex, AsUnsigned};
+use crate::integer::{AsIndex, AsSigned, AsUnsigned};
 use crate::memory::Memory;
 use crate::registers::Registers;
 
 // TODO consider making an architecture trait capturing RV32I, RV32E, RV64I, RV128I, etc
 
-trait UnsignedBounds: Num + PartialOrd + AsIndex {}
+trait UnsignedBounds<T: Num>:
+    Num + PartialOrd + AsIndex + Shr<u8, Output = Self> + AsSigned<T>
+{
+}
 
 trait Architecture<Unsigned>:
     Num
@@ -26,12 +29,14 @@ trait Architecture<Unsigned>:
     + BitXor<Output = Self>
     + BitOr<Output = Self>
     + BitAnd<Output = Self>
+    + Shl<u8, Output = Self>
+    + Shr<u8, Output = Self>
 where
-    Unsigned: UnsignedBounds,
+    Unsigned: UnsignedBounds<Self>,
 {
 }
 
-impl UnsignedBounds for u32 {}
+impl UnsignedBounds<i32> for u32 {}
 
 impl Architecture<u32> for i32 {}
 
@@ -39,7 +44,7 @@ impl Architecture<u32> for i32 {}
 struct Processor<Signed: Architecture<Unsigned>, Unsigned>
 where
     Signed: Architecture<Unsigned>,
-    Unsigned: UnsignedBounds,
+    Unsigned: UnsignedBounds<Signed>,
 {
     registers: Registers<Signed>,
     // Programme Counter
@@ -50,7 +55,7 @@ where
 impl<Signed, Unsigned> Processor<Signed, Unsigned>
 where
     Signed: Architecture<Unsigned>,
-    Unsigned: UnsignedBounds,
+    Unsigned: UnsignedBounds<Signed>,
 {
     /// Executes a single instruction on the processor
     fn execute(&mut self, instruction: Instruction) {
@@ -75,6 +80,15 @@ where
             }
             Instruction::ANDI { rd, rs1, imm } => {
                 self.registers[rd] = self.registers[rs1] & (imm.into())
+            }
+            Instruction::SLLI { rd, rs1, shamt } => {
+                self.registers[rd] = self.registers[rs1] << shamt
+            }
+            Instruction::SRLI { rd, rs1, shamt } => {
+                self.registers[rd] = (self.registers[rs1].as_unsigned() >> shamt).as_signed()
+            }
+            Instruction::SRAI { rd, rs1, shamt } => {
+                self.registers[rd] = self.registers[rs1] >> shamt
             }
             Instruction::ADD { rd, rs1, rs2 } => {
                 self.registers[rd] = self.registers[rs1].wrapping_add(&self.registers[rs2])
@@ -398,6 +412,88 @@ mod test {
             Instruction::ANDI{rd: Register::S4, rs1: Register::S5, imm: 7},
             changes: {registers: {s5: 19}},
             to: {registers: {s4: 3, s5: 19}},
+        );
+    }
+
+    #[test]
+    fn execute_slli() {
+        test_execute!(
+            Instruction::SLLI{rd: Register::SP, rs1: Register::RA, shamt: 5},
+            changes: {registers: {ra: 1}},
+            to: {registers: {sp: 32, ra: 1}},
+        );
+        test_execute!(
+            Instruction::SLLI{rd: Register::SP, rs1: Register::RA, shamt: 20},
+            changes: {registers: {ra: 0}},
+            to: {registers: {sp: 0, ra: 0}},
+        );
+        test_execute!(
+            Instruction::SLLI{rd: Register::SP, rs1: Register::RA, shamt: 1},
+            changes: {registers: {ra: i32::MAX}},
+            to: {registers: {sp: -2, ra: i32::MAX}},
+        );
+        test_execute!(
+            Instruction::SLLI{rd: Register::SP, rs1: Register::RA, shamt: 2},
+            changes: {registers: {ra: 2 << 29}},
+            to: {registers: {sp: 0, ra: 2 << 29}},
+        );
+    }
+
+    #[test]
+    fn execute_srli() {
+        test_execute!(
+            Instruction::SRLI{rd: Register::SP, rs1: Register::RA, shamt: 5},
+            changes: {registers: {ra: 64}},
+            to: {registers: {sp: 2, ra: 64}},
+        );
+        test_execute!(
+            Instruction::SRLI{rd: Register::SP, rs1: Register::RA, shamt: 20},
+            changes: {registers: {ra: 0}},
+            to: {registers: {sp: 0, ra: 0}},
+        );
+        test_execute!(
+            Instruction::SRLI{rd: Register::SP, rs1: Register::RA, shamt: 1},
+            changes: {registers: {ra: -1}},
+            to: {registers: {sp: i32::MAX, ra: -1}},
+        );
+        test_execute!(
+            Instruction::SRLI{rd: Register::SP, rs1: Register::RA, shamt: 1},
+            changes: {registers: {ra: -1000}},
+            to: {registers: {sp: 2147483148, ra: -1000}},
+        );
+        test_execute!(
+            Instruction::SRLI{rd: Register::SP, rs1: Register::RA, shamt: 2},
+            changes: {registers: {ra: 42}},
+            to: {registers: {sp: 10, ra: 42}},
+        );
+    }
+
+    #[test]
+    fn execute_srai() {
+        test_execute!(
+            Instruction::SRAI{rd: Register::SP, rs1: Register::RA, shamt: 5},
+            changes: {registers: {ra: 64}},
+            to: {registers: {sp: 2, ra: 64}},
+        );
+        test_execute!(
+            Instruction::SRAI{rd: Register::SP, rs1: Register::RA, shamt: 20},
+            changes: {registers: {ra: 0}},
+            to: {registers: {sp: 0, ra: 0}},
+        );
+        test_execute!(
+            Instruction::SRAI{rd: Register::SP, rs1: Register::RA, shamt: 10},
+            changes: {registers: {ra: -1}},
+            to: {registers: {sp: -1, ra: -1}},
+        );
+        test_execute!(
+            Instruction::SRAI{rd: Register::SP, rs1: Register::RA, shamt: 4},
+            changes: {registers: {ra: -1000}},
+            to: {registers: {sp: -63, ra: -1000}},
+        );
+        test_execute!(
+            Instruction::SRAI{rd: Register::SP, rs1: Register::RA, shamt: 2},
+            changes: {registers: {ra: 42}},
+            to: {registers: {sp: 10, ra: 42}},
         );
     }
 

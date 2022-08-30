@@ -5,8 +5,12 @@ pub(crate) mod i12 {
     pub const MIN: i16 = -2048;
 }
 
-pub(crate) trait AsUnsigned<N: Num + PartialOrd> {
+pub(crate) trait AsUnsigned<N: Num> {
     fn as_unsigned(self) -> N;
+}
+
+pub(crate) trait AsSigned<N: Num> {
+    fn as_signed(self) -> N;
 }
 
 pub trait AsIndex {
@@ -23,7 +27,7 @@ impl AsIndex for u32 {
     }
 }
 
-macro_rules! impl_unsigned {
+macro_rules! impl_signed_unsigned {
     ($signed:ty, $unsigned:ty) => {
         impl AsUnsigned<$unsigned> for $signed {
             fn as_unsigned(self) -> $unsigned {
@@ -35,11 +39,21 @@ macro_rules! impl_unsigned {
                 self as $unsigned
             }
         }
+        impl AsSigned<$signed> for $signed {
+            fn as_signed(self) -> $signed {
+                self as $signed
+            }
+        }
+        impl AsSigned<$signed> for $unsigned {
+            fn as_signed(self) -> $signed {
+                self as $signed
+            }
+        }
     };
 }
 
-impl_unsigned!(i8, u8);
-impl_unsigned!(i16, u16);
-impl_unsigned!(i32, u32);
-impl_unsigned!(i64, u64);
-impl_unsigned!(i128, u128);
+impl_signed_unsigned!(i8, u8);
+impl_signed_unsigned!(i16, u16);
+impl_signed_unsigned!(i32, u32);
+impl_signed_unsigned!(i64, u64);
+impl_signed_unsigned!(i128, u128);
