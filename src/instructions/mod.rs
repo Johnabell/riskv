@@ -167,6 +167,30 @@ pub(super) enum Instruction {
         rs2: Register,
     },
 
+    /// # Set Less Than
+    ///
+    /// Place the value 1 in register rd if register rs1 is less than register rs2 when both are
+    /// treated as signed numbers, else 0 is written to rd.
+    ///
+    /// `rd <- rs1 <s rs2`
+    SLT {
+        rd: Register,
+        rs1: Register,
+        rs2: Register,
+    },
+
+    /// # Set Less Than Unsigned
+    ///
+    /// Place the value 1 in register rd if register rs1 is less than register rs2 when both are
+    /// treated as unsigned numbers, else 0 is written to rd.
+    ///
+    /// `rd <- rs1 <u rs2`
+    SLTU {
+        rd: Register,
+        rs1: Register,
+        rs2: Register,
+    },
+
     /// # Subract
     ///
     /// Arithmetic overflow is ignored and the result is simply the low XLEN bits of the
@@ -268,6 +292,16 @@ impl From<u32> for Instruction {
                     rs2: *Rs2::from(value),
                 },
                 (0b_000, 0b_0100000) => Instruction::SUB {
+                    rd: *Rd::from(value),
+                    rs1: *Rs1::from(value),
+                    rs2: *Rs2::from(value),
+                },
+                (0b_010, 0b_0000000) => Instruction::SLT {
+                    rd: *Rd::from(value),
+                    rs1: *Rs1::from(value),
+                    rs2: *Rs2::from(value),
+                },
+                (0b_011, 0b_0000000) => Instruction::SLTU {
                     rd: *Rd::from(value),
                     rs1: *Rs1::from(value),
                     rs2: *Rs2::from(value),
@@ -458,6 +492,30 @@ mod test {
                 rd: Register::SP,
                 rs1: Register::S11,
                 rs2: Register::T4,
+            }
+        );
+    }
+
+    #[test]
+    fn stl_from_i32() {
+        assert_eq!(
+            Instruction::from(u32::from_le(0b_0000000_11100_10011_010_00110_0110011)),
+            Instruction::SLT {
+                rd: Register::T1,
+                rs1: Register::S3,
+                rs2: Register::T3,
+            }
+        );
+    }
+
+    #[test]
+    fn stlu_from_i32() {
+        assert_eq!(
+            Instruction::from(u32::from_le(0b_0000000_11000_10001_011_01110_0110011)),
+            Instruction::SLTU {
+                rd: Register::A4,
+                rs1: Register::A7,
+                rs2: Register::S8,
             }
         );
     }

@@ -137,7 +137,7 @@ impl Instruction {
     /// # Set Equal Zero
     ///
     /// Sets the destination register to 1 if `rs` is zero, otherwises set the destination register
-    /// to 1.
+    /// to 0.
     ///
     /// Note: This pseudoinstruction desugars to `SLTUI rd, rs, 1`.
     /// See [ref](https://github.com/riscv-non-isa/riscv-asm-manual/blob/master/riscv-asm.md#-a-listing-of-standard-risc-v-pseudoinstructions).
@@ -147,6 +147,54 @@ impl Instruction {
             rd,
             rs1: rs,
             imm: 1,
+        })
+    }
+
+    /// # Set Not Equal Zero
+    ///
+    /// Sets the destination register to 1 if `rs` is not equal to zero, otherwises set the destination register
+    /// to 0.
+    ///
+    /// Note: This pseudoinstruction desugars to `SLTU rd, x0, rs`.
+    /// See [ref](https://github.com/riscv-non-isa/riscv-asm-manual/blob/master/riscv-asm.md#-a-listing-of-standard-risc-v-pseudoinstructions).
+    #[allow(non_snake_case)]
+    pub(crate) fn SNEZ(rd: Register, rs: Register) -> PseudoinstructionMappingIter {
+        PseudoinstructionMappingIter::One(Instruction::SLTU {
+            rd,
+            rs1: Register::ZERO,
+            rs2: rs,
+        })
+    }
+
+    /// # Set Less Than Zero
+    ///
+    /// Sets the destination register to 1 if `rs` is less than zero, otherwises set the destination register
+    /// to 0.
+    ///
+    /// Note: This pseudoinstruction desugars to `SLT rd, rs, x0`.
+    /// See [ref](https://github.com/riscv-non-isa/riscv-asm-manual/blob/master/riscv-asm.md#-a-listing-of-standard-risc-v-pseudoinstructions).
+    #[allow(non_snake_case)]
+    pub(crate) fn SLTZ(rd: Register, rs: Register) -> PseudoinstructionMappingIter {
+        PseudoinstructionMappingIter::One(Instruction::SLT {
+            rd,
+            rs1: rs,
+            rs2: Register::ZERO,
+        })
+    }
+
+    /// # Set Greater Than Zero
+    ///
+    /// Sets the destination register to 1 if `rs` is greater than zero, otherwises set the destination register
+    /// to 0.
+    ///
+    /// Note: This pseudoinstruction desugars to `SLT rd, x0, rs`.
+    /// See [ref](https://github.com/riscv-non-isa/riscv-asm-manual/blob/master/riscv-asm.md#-a-listing-of-standard-risc-v-pseudoinstructions).
+    #[allow(non_snake_case)]
+    pub(crate) fn SGLZ(rd: Register, rs: Register) -> PseudoinstructionMappingIter {
+        PseudoinstructionMappingIter::One(Instruction::SLT {
+            rd,
+            rs1: Register::ZERO,
+            rs2: rs,
         })
     }
 
