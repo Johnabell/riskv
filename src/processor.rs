@@ -112,6 +112,9 @@ where
                 self.registers[rd] =
                     (self.registers[rs1].as_unsigned() < self.registers[rs2].as_unsigned()).into()
             }
+            Instruction::XOR { rd, rs1, rs2 } => {
+                self.registers[rd] = self.registers[rs1] ^ self.registers[rs2]
+            }
             Instruction::SRL { rd, rs1, rs2 } => {
                 self.registers[rd] = (self.registers[rs1].as_unsigned()
                     >> (self.registers[rs2] & Signed::SHIFT_MASK))
@@ -120,6 +123,12 @@ where
             Instruction::SRA { rd, rs1, rs2 } => {
                 self.registers[rd] =
                     self.registers[rs1] >> (self.registers[rs2] & Signed::SHIFT_MASK)
+            }
+            Instruction::OR { rd, rs1, rs2 } => {
+                self.registers[rd] = self.registers[rs1] | self.registers[rs2]
+            }
+            Instruction::AND { rd, rs1, rs2 } => {
+                self.registers[rd] = self.registers[rs1] & self.registers[rs2]
             }
             Instruction::LW { rd, rs1, offset } => {
                 self.registers[rd] = self.memory.load_word(
@@ -699,6 +708,30 @@ mod test {
     }
 
     #[test]
+    fn execute_or() {
+        test_execute!(
+            Instruction::OR{rd: Register::S0, rs1: Register::S1, rs2: Register::T2},
+            changes: {registers: {s1: 42, t2: -1}},
+            to: {registers: {s0: -1, s1: 42, t2: -1}},
+        );
+        test_execute!(
+            Instruction::OR{rd: Register::S2, rs1: Register::S3, rs2: Register::T3},
+            changes: {registers: {s3: 2, t3: 2}},
+            to: {registers: {s2: 2, s3: 2, t3: 2}},
+        );
+        test_execute!(
+            Instruction::OR{rd: Register::S4, rs1: Register::S5, rs2: Register::T4},
+            changes: {registers: {s5: 3, t4: 8}},
+            to: {registers: {s4: 11, s5: 3, t4: 8}},
+        );
+        test_execute!(
+            Instruction::OR{rd: Register::S4, rs1: Register::S5, rs2: Register::T5},
+            changes: {registers: {s5: 19, t5: 7}},
+            to: {registers: {s4: 23, s5: 19, t5: 7}},
+        );
+    }
+
+    #[test]
     fn execute_srl() {
         test_execute!(
             Instruction::SRL{rd: Register::S10, rs1: Register::S11, rs2: Register::A0},
@@ -760,6 +793,45 @@ mod test {
             to: {registers: {gp: 10, sp: 42, ra: 2}},
         );
     }
+
+    #[test]
+    fn execute_xor() {
+        test_execute!(
+            Instruction::XOR{rd: Register::A0, rs1: Register::A1, rs2: Register::A2},
+            changes: {registers: {a1: 42, a2: -1}},
+            to: {registers: {a0: !(42), a1: 42, a2: -1}},
+        );
+        test_execute!(
+            Instruction::XOR{rd: Register::A2, rs1: Register::A3, rs2: Register::A4},
+            changes: {registers: {a3: 2, a4: 1}},
+            to: {registers: {a2: 3, a3: 2, a4: 1}},
+        );
+    }
+
+    #[test]
+    fn execute_and() {
+        test_execute!(
+            Instruction::AND{rd: Register::S0, rs1: Register::S1, rs2: Register::A1},
+            changes: {registers: {s1: 42, a1: -1}},
+            to: {registers: {s0: 42, s1: 42, a1: -1}},
+        );
+        test_execute!(
+            Instruction::AND{rd: Register::S2, rs1: Register::S3, rs2: Register::A2},
+            changes: {registers: {s3: 2, a2: 2}},
+            to: {registers: {s2: 2, s3: 2, a2: 2}},
+        );
+        test_execute!(
+            Instruction::AND{rd: Register::S4, rs1: Register::S5, rs2: Register::A3},
+            changes: {registers: {s5: 3, a3: 8}},
+            to: {registers: {s4: 0, s5: 3, a3: 8}},
+        );
+        test_execute!(
+            Instruction::AND{rd: Register::S4, rs1: Register::S5, rs2: Register::A4},
+            changes: {registers: {s5: 19, a4: 7}},
+            to: {registers: {s4: 3, s5: 19, a4: 7}},
+        );
+    }
+
     #[test]
     fn execute_lw() {
         test_execute!(

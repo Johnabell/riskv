@@ -216,6 +216,17 @@ pub(super) enum Instruction {
         rs2: Register,
     },
 
+    /// # XOR
+    ///
+    /// Performs bitwise XOR on registers rs1 and rs2 and place the result in rd.
+    ///
+    /// `rd = rs1 ^ rs2`
+    XOR {
+        rd: Register,
+        rs1: Register,
+        rs2: Register,
+    },
+
     /// # Shift Right Logical
     ///
     /// Performs logical right shift on the value in register rs1 by the shift amount held in the
@@ -235,6 +246,28 @@ pub(super) enum Instruction {
     ///
     /// `rd = rs1 >>s rs2`
     SRA {
+        rd: Register,
+        rs1: Register,
+        rs2: Register,
+    },
+
+    /// # OR
+    ///
+    /// Performs bitwise OR on registers rs1 and rs2 and place the result in rd.
+    ///
+    /// `rd = rs1 | rs2`
+    OR {
+        rd: Register,
+        rs1: Register,
+        rs2: Register,
+    },
+
+    /// # AND
+    ///
+    /// Performs bitwise AND on registers rs1 and rs2 and place the result in rd.
+    ///
+    /// `rd = rs1 & rs2`
+    AND {
         rd: Register,
         rs1: Register,
         rs2: Register,
@@ -347,12 +380,27 @@ impl From<u32> for Instruction {
                     rs1: *Rs1::from(value),
                     rs2: *Rs2::from(value),
                 },
+                (0b_100, 0b_0000000) => Instruction::XOR {
+                    rd: *Rd::from(value),
+                    rs1: *Rs1::from(value),
+                    rs2: *Rs2::from(value),
+                },
                 (0b_101, 0b_0000000) => Instruction::SRL {
                     rd: *Rd::from(value),
                     rs1: *Rs1::from(value),
                     rs2: *Rs2::from(value),
                 },
                 (0b_101, 0b_0100000) => Instruction::SRA {
+                    rd: *Rd::from(value),
+                    rs1: *Rs1::from(value),
+                    rs2: *Rs2::from(value),
+                },
+                (0b_110, 0b_0100000) => Instruction::OR {
+                    rd: *Rd::from(value),
+                    rs1: *Rs1::from(value),
+                    rs2: *Rs2::from(value),
+                },
+                (0b_111, 0b_0100000) => Instruction::AND {
                     rd: *Rd::from(value),
                     rs1: *Rs1::from(value),
                     rs2: *Rs2::from(value),
@@ -584,6 +632,18 @@ mod test {
     }
 
     #[test]
+    fn xor_from_i32() {
+        assert_eq!(
+            Instruction::from(u32::from_le(0b_0000000_00111_01010_100_00101_0110011)),
+            Instruction::XOR {
+                rd: Register::T0,
+                rs1: Register::A0,
+                rs2: Register::T2,
+            }
+        );
+    }
+
+    #[test]
     fn srl_from_i32() {
         assert_eq!(
             Instruction::from(u32::from_le(0b_0000000_11001_11000_101_10111_0110011)),
@@ -603,6 +663,30 @@ mod test {
                 rd: Register::S10,
                 rs1: Register::S11,
                 rs2: Register::T3,
+            }
+        );
+    }
+
+    #[test]
+    fn or_from_i32() {
+        assert_eq!(
+            Instruction::from(u32::from_le(0b_0100000_11100_01001_110_01000_0110011)),
+            Instruction::OR {
+                rd: Register::S0,
+                rs1: Register::S1,
+                rs2: Register::T3,
+            }
+        );
+    }
+
+    #[test]
+    fn and_from_i32() {
+        assert_eq!(
+            Instruction::from(u32::from_le(0b_0100000_11111_11110_111_11101_0110011)),
+            Instruction::AND {
+                rd: Register::T4,
+                rs1: Register::T5,
+                rs2: Register::T6,
             }
         );
     }
