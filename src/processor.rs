@@ -12,7 +12,7 @@ use crate::registers::Registers;
 // TODO consider making an architecture trait capturing RV32I, RV32E, RV64I, RV128I, etc
 
 trait UnsignedBounds<T: Num>:
-    Num + PartialOrd + AsIndex + Shr<u8, Output = Self> + AsSigned<T>
+    Num + PartialOrd + AsIndex + Shr<u8, Output = Self> + Shr<T, Output = Self> + AsSigned<T>
 {
 }
 
@@ -31,14 +31,19 @@ trait Architecture<Unsigned>:
     + BitAnd<Output = Self>
     + Shl<u8, Output = Self>
     + Shr<u8, Output = Self>
+    + Shl<Self, Output = Self>
+    + Shr<Self, Output = Self>
 where
     Unsigned: UnsignedBounds<Self>,
 {
+    const SHIFT_MASK: Self;
 }
 
 impl UnsignedBounds<i32> for u32 {}
 
-impl Architecture<u32> for i32 {}
+impl Architecture<u32> for i32 {
+    const SHIFT_MASK: i32 = 0b_00000000_00000000_00000000_00011111;
+}
 
 #[derive(Debug, Default, PartialEq, Eq)]
 struct Processor<Signed: Architecture<Unsigned>, Unsigned>
@@ -96,12 +101,25 @@ where
             Instruction::SUB { rd, rs1, rs2 } => {
                 self.registers[rd] = self.registers[rs1].wrapping_sub(&self.registers[rs2])
             }
+            Instruction::SLL { rd, rs1, rs2 } => {
+                self.registers[rd] =
+                    self.registers[rs1] << (self.registers[rs2] & Signed::SHIFT_MASK)
+            }
             Instruction::SLT { rd, rs1, rs2 } => {
                 self.registers[rd] = (self.registers[rs1] < self.registers[rs2]).into()
             }
             Instruction::SLTU { rd, rs1, rs2 } => {
                 self.registers[rd] =
                     (self.registers[rs1].as_unsigned() < self.registers[rs2].as_unsigned()).into()
+            }
+            Instruction::SRL { rd, rs1, rs2 } => {
+                self.registers[rd] = (self.registers[rs1].as_unsigned()
+                    >> (self.registers[rs2] & Signed::SHIFT_MASK))
+                    .as_signed()
+            }
+            Instruction::SRA { rd, rs1, rs2 } => {
+                self.registers[rd] =
+                    self.registers[rs1] >> (self.registers[rs2] & Signed::SHIFT_MASK)
             }
             Instruction::LW { rd, rs1, offset } => {
                 self.registers[rd] = self.memory.load_word(
@@ -609,6 +627,30 @@ mod test {
     }
 
     #[test]
+    fn execute_sll() {
+        test_execute!(
+            Instruction::SLL{rd: Register::T4, rs1: Register::T5, rs2: Register::T6},
+            changes: {registers: {t5: 0, t6: 4}},
+            to: {registers: {t4: 0, t5: 0, t6: 4}},
+        );
+        test_execute!(
+            Instruction::SLL{rd: Register::S1, rs1: Register::S2, rs2: Register::S3},
+            changes: {registers: {s1: 100, s2: 1, s3: 63}},
+            to: {registers: {s1: i32::MIN, s2: 1, s3: 63}},
+        );
+        test_execute!(
+            Instruction::SLL{rd: Register::S4, rs1: Register::S5, rs2: Register::S6},
+            changes: {registers: {s4: 100, s5: i32::MAX, s6: 1}},
+            to: {registers: {s4: -2, s5: i32::MAX, s6: 1}},
+        );
+        test_execute!(
+            Instruction::SLL{rd: Register::S7, rs1: Register::S8, rs2: Register::S9},
+            changes: {registers: {s7: 100, s8: 2 << 29, s9: 2}},
+            to: {registers: {s7: 0, s8: 2 << 29, s9: 2}},
+        );
+    }
+
+    #[test]
     fn execute_slt() {
         test_execute!(
             Instruction::SLT{rd: Register::T4, rs1: Register::T1, rs2: Register::T3},
@@ -656,6 +698,68 @@ mod test {
         );
     }
 
+    #[test]
+    fn execute_srl() {
+        test_execute!(
+            Instruction::SRL{rd: Register::S10, rs1: Register::S11, rs2: Register::A0},
+            changes: {registers: {s10: 100, s11: 64, a0: 5}},
+            to: {registers: {s10: 2, s11: 64, a0: 5}},
+        );
+        test_execute!(
+            Instruction::SRL{rd: Register::A1, rs1: Register::A2, rs2: Register::A3},
+            changes: {registers: {a1: 100, a2: -1, a3: 1}},
+            to: {registers: {a1: i32::MAX, a2: -1, a3: 1}},
+        );
+        test_execute!(
+            Instruction::SRL{rd: Register::A4, rs1: Register::A5, rs2: Register::A6},
+            changes: {registers: {a4: 100, a5: -1000, a6: 1}},
+            to: {registers: {a4: 2147483148, a5: -1000, a6: 1}},
+        );
+        test_execute!(
+            Instruction::SRL{rd: Register::A4, rs1: Register::A5, rs2: Register::A6},
+            changes: {registers: {a4: 100, a5: i32::MIN, a6: 63}},
+            to: {registers: {a4: 1, a5: i32::MIN, a6: 63}},
+        );
+        test_execute!(
+            Instruction::SRL{rd: Register::A7, rs1: Register::A2, rs2: Register::A3},
+            changes: {registers: {a7: 100, a2: 42, a3: 2}},
+            to: {registers: {a7: 10, a2: 42, a3: 2}},
+        );
+    }
+
+    #[test]
+    fn execute_sra() {
+        test_execute!(
+            Instruction::SRA{rd: Register::T0, rs1: Register::T1, rs2: Register::T2},
+            changes: {registers: {t0: 100, t1: 64, t2: 5}},
+            to: {registers: {t0: 2, t1: 64, t2: 5}},
+        );
+        test_execute!(
+            Instruction::SRA{rd: Register::T3, rs1: Register::T4, rs2: Register::T5},
+            changes: {registers: {t3: 100, t4: 0, t5: 20}},
+            to: {registers: {t3: 0, t4: 0, t5: 20}},
+        );
+        test_execute!(
+            Instruction::SRA{rd: Register::T6, rs1: Register::S0, rs2: Register::TP},
+            changes: {registers: {t6: 100, s0: -1, tp: 10}},
+            to: {registers: {t6: -1, s0: -1, tp: 10}},
+        );
+        test_execute!(
+            Instruction::SRA{rd: Register::A4, rs1: Register::A5, rs2: Register::A6},
+            changes: {registers: {a4: 100, a5: i32::MIN, a6: 63}},
+            to: {registers: {a4: -1, a5: i32::MIN, a6: 63}},
+        );
+        test_execute!(
+            Instruction::SRA{rd: Register::GP, rs1: Register::SP, rs2: Register::RA},
+            changes: {registers: {gp: 100, sp: -1000, ra: 4}},
+            to: {registers: {gp: -63, sp: -1000, ra: 4}},
+        );
+        test_execute!(
+            Instruction::SRA{rd: Register::GP, rs1: Register::SP, rs2: Register::RA},
+            changes: {registers: {gp: 100, sp: 42, ra: 2}},
+            to: {registers: {gp: 10, sp: 42, ra: 2}},
+        );
+    }
     #[test]
     fn execute_lw() {
         test_execute!(

@@ -167,6 +167,31 @@ pub(super) enum Instruction {
         rs2: Register,
     },
 
+    /// # Subract
+    ///
+    /// Arithmetic overflow is ignored and the result is simply the low XLEN bits of the
+    /// result.
+    /// placing the output in `rd`
+    ///
+    /// `rd <- rs1 - rs2`
+    SUB {
+        rd: Register,
+        rs1: Register,
+        rs2: Register,
+    },
+
+    /// # Shift Left Logical
+    ///
+    /// Performs logical left shift on the value in register rs1 by the shift amount held in the
+    /// lower 5 bits (for 32-bit archeticture) or 6 bits (64-bit archetecture) of register rs2.
+    ///
+    /// `rd = rs1 << rs2`
+    SLL {
+        rd: Register,
+        rs1: Register,
+        rs2: Register,
+    },
+
     /// # Set Less Than
     ///
     /// Place the value 1 in register rd if register rs1 is less than register rs2 when both are
@@ -191,14 +216,25 @@ pub(super) enum Instruction {
         rs2: Register,
     },
 
-    /// # Subract
+    /// # Shift Right Logical
     ///
-    /// Arithmetic overflow is ignored and the result is simply the low XLEN bits of the
-    /// result.
-    /// placing the output in `rd`
+    /// Performs logical right shift on the value in register rs1 by the shift amount held in the
+    /// lower 5 bits (for 32-bit archeticture) or 6 bits (64-bit archetecture) of register rs2.
     ///
-    /// `rd <- rs1 - rs2`
-    SUB {
+    /// `rd = rs1 >> rs2`
+    SRL {
+        rd: Register,
+        rs1: Register,
+        rs2: Register,
+    },
+
+    /// # Shift Right Arithmetic
+    ///
+    /// Performs arithmetic right shift on the value in register rs1 by the shift amount held in the
+    /// lower 5 bits (for 32-bit archeticture) or 6 bits (64-bit archetecture) of register rs2.
+    ///
+    /// `rd = rs1 >>s rs2`
+    SRA {
         rd: Register,
         rs1: Register,
         rs2: Register,
@@ -296,12 +332,27 @@ impl From<u32> for Instruction {
                     rs1: *Rs1::from(value),
                     rs2: *Rs2::from(value),
                 },
+                (0b_001, 0b_0000000) => Instruction::SLL {
+                    rd: *Rd::from(value),
+                    rs1: *Rs1::from(value),
+                    rs2: *Rs2::from(value),
+                },
                 (0b_010, 0b_0000000) => Instruction::SLT {
                     rd: *Rd::from(value),
                     rs1: *Rs1::from(value),
                     rs2: *Rs2::from(value),
                 },
                 (0b_011, 0b_0000000) => Instruction::SLTU {
+                    rd: *Rd::from(value),
+                    rs1: *Rs1::from(value),
+                    rs2: *Rs2::from(value),
+                },
+                (0b_101, 0b_0000000) => Instruction::SRL {
+                    rd: *Rd::from(value),
+                    rs1: *Rs1::from(value),
+                    rs2: *Rs2::from(value),
+                },
+                (0b_101, 0b_0100000) => Instruction::SRA {
                     rd: *Rd::from(value),
                     rs1: *Rs1::from(value),
                     rs2: *Rs2::from(value),
@@ -497,6 +548,18 @@ mod test {
     }
 
     #[test]
+    fn sll_from_i32() {
+        assert_eq!(
+            Instruction::from(u32::from_le(0b_0000000_10110_10101_001_10100_0110011)),
+            Instruction::SLL {
+                rd: Register::S4,
+                rs1: Register::S5,
+                rs2: Register::S6,
+            }
+        );
+    }
+
+    #[test]
     fn stl_from_i32() {
         assert_eq!(
             Instruction::from(u32::from_le(0b_0000000_11100_10011_010_00110_0110011)),
@@ -516,6 +579,30 @@ mod test {
                 rd: Register::A4,
                 rs1: Register::A7,
                 rs2: Register::S8,
+            }
+        );
+    }
+
+    #[test]
+    fn srl_from_i32() {
+        assert_eq!(
+            Instruction::from(u32::from_le(0b_0000000_11001_11000_101_10111_0110011)),
+            Instruction::SRL {
+                rd: Register::S7,
+                rs1: Register::S8,
+                rs2: Register::S9,
+            }
+        );
+    }
+
+    #[test]
+    fn sra_from_i32() {
+        assert_eq!(
+            Instruction::from(u32::from_le(0b_0100000_11100_11011_101_11010_0110011)),
+            Instruction::SRA {
+                rd: Register::S10,
+                rs1: Register::S11,
+                rs2: Register::T3,
             }
         );
     }
