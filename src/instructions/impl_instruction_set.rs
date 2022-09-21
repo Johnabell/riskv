@@ -1,0 +1,799 @@
+use crate::instruction_set::{Exception, InstructionSet};
+use crate::integer::{AsSigned, AsUnsigned};
+use crate::processor::Processor;
+
+use super::Instruction;
+
+impl InstructionSet for Instruction {
+    const SHIFT_MASK: i32 = 0b_00000000_00000000_00000000_00011111;
+
+    type RegisterType = i32;
+
+    fn decode(raw_instruction: u32) -> Result<Self, Exception> {
+        Ok(raw_instruction.into())
+    }
+
+    fn execute(self, processor: &mut Processor<Self::RegisterType>) -> Result<(), Exception> {
+        Ok(match self {
+            Instruction::LUI { rd, imm } => processor.registers[rd] = (imm << 12).into(),
+            Instruction::AUIPC { rd, imm } => {
+                processor.registers[rd] = processor.pc + Self::RegisterType::from(imm << 12)
+            }
+            Instruction::ADDI { rd, rs1, imm } => {
+                processor.registers[rd] = processor.registers[rs1].wrapping_add(imm.into())
+            }
+            Instruction::SLTI { rd, rs1, imm } => {
+                processor.registers[rd] = (processor.registers[rs1] < imm.into()).into()
+            }
+            Instruction::SLTIU { rd, rs1, imm } => {
+                processor.registers[rd] = (processor.registers[rs1].as_unsigned()
+                    < Self::RegisterType::from(imm).as_unsigned())
+                .into()
+            }
+            Instruction::XORI { rd, rs1, imm } => {
+                processor.registers[rd] = processor.registers[rs1] ^ Self::RegisterType::from(imm)
+            }
+            Instruction::ORI { rd, rs1, imm } => {
+                processor.registers[rd] = processor.registers[rs1] | Self::RegisterType::from(imm)
+            }
+            Instruction::ANDI { rd, rs1, imm } => {
+                processor.registers[rd] = processor.registers[rs1] & Self::RegisterType::from(imm)
+            }
+            Instruction::SLLI { rd, rs1, shamt } => {
+                processor.registers[rd] = processor.registers[rs1] << shamt
+            }
+            Instruction::SRLI { rd, rs1, shamt } => {
+                processor.registers[rd] =
+                    (processor.registers[rs1].as_unsigned() >> shamt).as_signed()
+            }
+            Instruction::SRAI { rd, rs1, shamt } => {
+                processor.registers[rd] = processor.registers[rs1] >> shamt
+            }
+            Instruction::ADD { rd, rs1, rs2 } => {
+                processor.registers[rd] =
+                    processor.registers[rs1].wrapping_add(processor.registers[rs2])
+            }
+            Instruction::SUB { rd, rs1, rs2 } => {
+                processor.registers[rd] =
+                    processor.registers[rs1].wrapping_sub(processor.registers[rs2])
+            }
+            Instruction::SLL { rd, rs1, rs2 } => {
+                processor.registers[rd] =
+                    processor.registers[rs1] << (processor.registers[rs2] & Self::SHIFT_MASK)
+            }
+            Instruction::SLT { rd, rs1, rs2 } => {
+                processor.registers[rd] =
+                    (processor.registers[rs1] < processor.registers[rs2]).into()
+            }
+            Instruction::SLTU { rd, rs1, rs2 } => {
+                processor.registers[rd] = (processor.registers[rs1].as_unsigned()
+                    < processor.registers[rs2].as_unsigned())
+                .into()
+            }
+            Instruction::XOR { rd, rs1, rs2 } => {
+                processor.registers[rd] = processor.registers[rs1] ^ processor.registers[rs2]
+            }
+            Instruction::SRL { rd, rs1, rs2 } => {
+                processor.registers[rd] = (processor.registers[rs1].as_unsigned()
+                    >> (processor.registers[rs2] & Self::SHIFT_MASK))
+                    .as_signed()
+            }
+            Instruction::SRA { rd, rs1, rs2 } => {
+                processor.registers[rd] =
+                    processor.registers[rs1] >> (processor.registers[rs2] & Self::SHIFT_MASK)
+            }
+            Instruction::OR { rd, rs1, rs2 } => {
+                processor.registers[rd] = processor.registers[rs1] | processor.registers[rs2]
+            }
+            Instruction::AND { rd, rs1, rs2 } => {
+                processor.registers[rd] = processor.registers[rs1] & processor.registers[rs2]
+            }
+            Instruction::LW { rd, rs1, offset } => {
+                processor.registers[rd] = processor.memory.load_word(
+                    processor.registers[rs1]
+                        .wrapping_add(offset.into())
+                        .as_unsigned() as usize,
+                )
+            }
+        })
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+    use crate::integer::i12;
+    use crate::memory::Memory;
+    use crate::processor::Processor;
+    use crate::registers::{Register, Registers};
+
+    macro_rules! register_state {
+        ($($register:ident: $value:expr),* $(,)?) => {
+            Registers::<i32> {
+                $($register: $value,)*
+                ..Default::default()
+            }
+        };
+        ({$($register:ident: $value:expr),* $(,)?}) => {
+            register_state!($($register: $value,)*)
+        };
+    }
+    macro_rules! memory_state {
+        ($($location:literal: $value:expr),* $(,)?) => {
+            {
+                let mut mem = Memory::default();
+                $(
+                    mem.store_word($location, $value);
+                )*
+                mem
+            }
+        };
+        ({$($location:literal: $value:expr),* $(,)?}) => {
+            memory_state!($($location: $value,)*)
+        };
+    }
+    macro_rules! processor_state {
+        (
+            registers: $register_state:tt
+            $(, memory: $memory_state:tt)?
+            $(, pc: $program_counter1:expr)?
+            $(,)?
+        ) => {
+            Processor {
+                registers: register_state!($register_state)
+                $(, memory: memory_state!($memory_state))?
+                $(, pc: $program_counter1)?
+                , ..Default::default()
+            }
+        };
+        (
+            {
+                registers: $register_state:tt
+                $(, memory: $memory_state:tt)?
+                $(, pc: $program_counter2:expr)?
+                $(,)?
+            }
+        ) => {
+            processor_state!(
+                registers: $register_state
+                $(, memory: $memory_state)?
+                $(, pc: $program_counter2)?
+            )
+        };
+    }
+    macro_rules! test_execute {
+        ($instruction:expr, changes: $initial_state:tt, to: $final_state:tt $(,)?) => {
+            // Arrange
+            let mut processor = processor_state!($initial_state);
+
+            // Act
+            $instruction.execute(&mut processor).unwrap();
+
+            // Assert
+            assert_eq!(processor, processor_state!($final_state));
+        };
+    }
+    macro_rules! test_execute_many {
+        ($instructions:expr, changes: $initial_state:tt, to: $final_state:tt $(,)?) => {
+            // Arrange
+            let mut processor = processor_state!($initial_state);
+
+            // Act
+            for instruction in $instructions {
+                instruction.execute(&mut processor).unwrap();
+            }
+
+            // Assert
+            assert_eq!(processor, processor_state!($final_state));
+        };
+    }
+
+    #[test]
+    fn execute_li() {
+        for i in [
+            0,
+            i12::MIN as i32,
+            i12::MAX as i32,
+            i12::MIN as i32 - 1,
+            i12::MAX as i32 + 1,
+            i32::MAX,
+            i32::MIN,
+        ] {
+            test_execute_many!(
+                Instruction::LI(Register::T1, i),
+                changes: {registers: {}},
+                to: {registers: {t1: i}},
+            );
+        }
+    }
+
+    #[test]
+    fn execute_not() {
+        test_execute_many!(
+            Instruction::NOT(Register::A5, Register::A6),
+            changes: {registers: {a6: -1}},
+            to: {registers: {a5: 0, a6: -1}},
+        );
+        test_execute_many!(
+            Instruction::NOT(Register::A5, Register::A6),
+            changes: {registers: {a6: 0}},
+            to: {registers: {a5: -1, a6: 0}},
+        );
+        test_execute_many!(
+            Instruction::NOT(Register::A5, Register::A6),
+            changes: {registers: {a6: 42}},
+            to: {registers: {a5: -43, a6: 42}},
+        );
+    }
+
+    #[test]
+    fn execute_neg() {
+        test_execute_many!(
+            Instruction::NEG(Register::S5, Register::S6),
+            changes: {registers: {s6: -1}},
+            to: {registers: {s5: 1, s6: -1}},
+        );
+        test_execute_many!(
+            Instruction::NEG(Register::S5, Register::S6),
+            changes: {registers: {s6: -1}},
+            to: {registers: {s5: 1, s6: -1}},
+        );
+        test_execute_many!(
+            Instruction::NEG(Register::S5, Register::S6),
+            changes: {registers: {s6: 42}},
+            to: {registers: {s5: -42, s6: 42}},
+        );
+        test_execute_many!(
+            Instruction::NEG(Register::S5, Register::S6),
+            changes: {registers: {s6: 0}},
+            to: {registers: {s5: 0, s6: 0}},
+        );
+    }
+
+    #[test]
+    fn execute_mov() {
+        test_execute_many!(
+            Instruction::MOV(Register::T5, Register::T6),
+            changes: {registers: {t6: -1}},
+            to: {registers: {t5: -1, t6: -1}},
+        );
+    }
+
+    #[test]
+    fn execute_seqz() {
+        test_execute_many!(
+            Instruction::SEQZ(Register::A3, Register::A1),
+            changes: {registers: {a1: -1}},
+            to: {registers: {a1: -1, a3: 0}},
+        );
+        test_execute_many!(
+            Instruction::SEQZ(Register::A3, Register::A1),
+            changes: {registers: {a1: 0}},
+            to: {registers: {a1: 0, a3: 1}},
+        );
+        test_execute_many!(
+            Instruction::SEQZ(Register::A3, Register::A1),
+            changes: {registers: {a1: 1}},
+            to: {registers: {a1: 1, a3: 0}},
+        );
+    }
+
+    #[test]
+    fn execute_snez() {
+        test_execute_many!(
+            Instruction::SNEZ(Register::A3, Register::A1),
+            changes: {registers: {a1: -1}},
+            to: {registers: {a1: -1, a3: 1}},
+        );
+        test_execute_many!(
+            Instruction::SNEZ(Register::A3, Register::A1),
+            changes: {registers: {a1: 0}},
+            to: {registers: {a1: 0, a3: 0}},
+        );
+        test_execute_many!(
+            Instruction::SNEZ(Register::A3, Register::A1),
+            changes: {registers: {a1: 1}},
+            to: {registers: {a1: 1, a3: 1}},
+        );
+    }
+
+    #[test]
+    fn execute_sltz() {
+        test_execute_many!(
+            Instruction::SLTZ(Register::A3, Register::A1),
+            changes: {registers: {a1: -1}},
+            to: {registers: {a1: -1, a3: 1}},
+        );
+        test_execute_many!(
+            Instruction::SLTZ(Register::A3, Register::A1),
+            changes: {registers: {a1: 0}},
+            to: {registers: {a1: 0, a3: 0}},
+        );
+        test_execute_many!(
+            Instruction::SLTZ(Register::A3, Register::A1),
+            changes: {registers: {a1: 1}},
+            to: {registers: {a1: 1, a3: 0}},
+        );
+    }
+
+    #[test]
+    fn execute_sgtz() {
+        test_execute_many!(
+            Instruction::SGLZ(Register::A3, Register::A1),
+            changes: {registers: {a1: -1}},
+            to: {registers: {a1: -1, a3: 0}},
+        );
+        test_execute_many!(
+            Instruction::SGLZ(Register::A3, Register::A1),
+            changes: {registers: {a1: 0}},
+            to: {registers: {a1: 0, a3: 0}},
+        );
+        test_execute_many!(
+            Instruction::SGLZ(Register::A3, Register::A1),
+            changes: {registers: {a1: 1}},
+            to: {registers: {a1: 1, a3: 1}},
+        );
+    }
+
+    #[test]
+    fn execute_nop() {
+        test_execute_many!(
+            Instruction::NOP,
+            changes: {registers: {}},
+            to: {registers: {}},
+        );
+    }
+
+    #[test]
+    fn execute_lui() {
+        test_execute!(
+            Instruction::LUI { rd: Register::S11, imm: 0x2BAAA },
+            changes: {registers: {}},
+            to: {registers: {s11: 0x2BAA_A000}},
+        );
+        test_execute!(
+            Instruction::LUI { rd: Register::S11, imm: 0xDEAD_B },
+            changes: {registers: {}},
+            to: {registers: {s11: i32::from_be_bytes([0xDE, 0xAD, 0xB0, 0x00])}},
+        );
+    }
+
+    #[test]
+    fn execute_auipc() {
+        test_execute!(
+            Instruction::AUIPC { rd: Register::SP, imm: 0x2BAAA },
+            changes: {registers: {}, pc: 0x0000_0AAD},
+            to: {registers: {sp: 0x2BAA_AAAD}, pc: 0x0000_0AAD},
+        );
+        test_execute!(
+            Instruction::AUIPC { rd: Register::SP, imm: 0xDEAD_B },
+            changes: {registers: {}, pc: 0x0000_0EAF},
+            to: {registers: {sp: i32::from_be_bytes([0xDE, 0xAD, 0xBE, 0xAF])}, pc: 0x0000_0EAF},
+        );
+    }
+
+    #[test]
+    fn execute_addi() {
+        test_execute!(
+            Instruction::ADDI{rd: Register::T4, rs1: Register::T1, imm: 42},
+            changes: {registers: {t1: 42}},
+            to: {registers: {t1: 42, t4: 84}},
+        );
+    }
+
+    #[test]
+    fn execute_slti() {
+        test_execute!(
+            Instruction::SLTI{rd: Register::T4, rs1: Register::T1, imm: 43},
+            changes: {registers: {t1: 42}},
+            to: {registers: {t1: 42, t4: 1}},
+        );
+        test_execute!(
+            Instruction::SLTI{rd: Register::T4, rs1: Register::T1, imm: 42},
+            changes: {registers: {t1: 42, t4: 100}},
+            to: {registers: {t1: 42, t4: 0}},
+        );
+        test_execute!(
+            Instruction::SLTI{rd: Register::T4, rs1: Register::T1, imm: -43},
+            changes: {registers: {t1: 42}},
+            to: {registers: {t1: 42, t4: 0}},
+        );
+    }
+
+    #[test]
+    fn execute_sltiu() {
+        test_execute!(
+            Instruction::SLTIU{rd: Register::T4, rs1: Register::T1, imm: 43},
+            changes: {registers: {t1: 42}},
+            to: {registers: {t1: 42, t4: 1}},
+        );
+        test_execute!(
+            Instruction::SLTIU{rd: Register::T4, rs1: Register::T1, imm: 42},
+            changes: {registers: {t1: 42, t4: 100}},
+            to: {registers: {t1: 42, t4: 0}},
+        );
+        test_execute!(
+            Instruction::SLTIU{rd: Register::T4, rs1: Register::T1, imm: -43},
+            changes: {registers: {t1: 42}},
+            to: {registers: {t1: 42, t4: 1}},
+        );
+        test_execute!(
+            Instruction::SLTIU{rd: Register::T4, rs1: Register::T1, imm: 1},
+            changes: {registers: {t1: 42}},
+            to: {registers: {t1: 42, t4: 0}},
+        );
+        test_execute!(
+            Instruction::SLTIU{rd: Register::T4, rs1: Register::T1, imm: 1},
+            changes: {registers: {t1: 0}},
+            to: {registers: {t1: 0, t4: 1}},
+        );
+    }
+
+    #[test]
+    fn execute_xori() {
+        test_execute!(
+            Instruction::XORI{rd: Register::A0, rs1: Register::A1, imm: -1},
+            changes: {registers: {a1: 42}},
+            to: {registers: {a0: !(42), a1: 42}},
+        );
+        test_execute!(
+            Instruction::XORI{rd: Register::A2, rs1: Register::A3, imm: 1},
+            changes: {registers: {a3: 2}},
+            to: {registers: {a2: 3, a3: 2}},
+        );
+    }
+
+    #[test]
+    fn execute_ori() {
+        test_execute!(
+            Instruction::ORI{rd: Register::S0, rs1: Register::S1, imm: -1},
+            changes: {registers: {s1: 42}},
+            to: {registers: {s0: -1, s1: 42}},
+        );
+        test_execute!(
+            Instruction::ORI{rd: Register::S2, rs1: Register::S3, imm: 2},
+            changes: {registers: {s3: 2}},
+            to: {registers: {s2: 2, s3: 2}},
+        );
+        test_execute!(
+            Instruction::ORI{rd: Register::S4, rs1: Register::S5, imm: 8},
+            changes: {registers: {s5: 3}},
+            to: {registers: {s4: 11, s5: 3}},
+        );
+        test_execute!(
+            Instruction::ORI{rd: Register::S4, rs1: Register::S5, imm: 7},
+            changes: {registers: {s5: 19}},
+            to: {registers: {s4: 23, s5: 19}},
+        );
+    }
+
+    #[test]
+    fn execute_andi() {
+        test_execute!(
+            Instruction::ANDI{rd: Register::S0, rs1: Register::S1, imm: -1},
+            changes: {registers: {s1: 42}},
+            to: {registers: {s0: 42, s1: 42}},
+        );
+        test_execute!(
+            Instruction::ANDI{rd: Register::S2, rs1: Register::S3, imm: 2},
+            changes: {registers: {s3: 2}},
+            to: {registers: {s2: 2, s3: 2}},
+        );
+        test_execute!(
+            Instruction::ANDI{rd: Register::S4, rs1: Register::S5, imm: 8},
+            changes: {registers: {s5: 3}},
+            to: {registers: {s4: 0, s5: 3}},
+        );
+        test_execute!(
+            Instruction::ANDI{rd: Register::S4, rs1: Register::S5, imm: 7},
+            changes: {registers: {s5: 19}},
+            to: {registers: {s4: 3, s5: 19}},
+        );
+    }
+
+    #[test]
+    fn execute_slli() {
+        test_execute!(
+            Instruction::SLLI{rd: Register::SP, rs1: Register::RA, shamt: 5},
+            changes: {registers: {ra: 1}},
+            to: {registers: {sp: 32, ra: 1}},
+        );
+        test_execute!(
+            Instruction::SLLI{rd: Register::SP, rs1: Register::RA, shamt: 20},
+            changes: {registers: {ra: 0}},
+            to: {registers: {sp: 0, ra: 0}},
+        );
+        test_execute!(
+            Instruction::SLLI{rd: Register::SP, rs1: Register::RA, shamt: 1},
+            changes: {registers: {ra: i32::MAX}},
+            to: {registers: {sp: -2, ra: i32::MAX}},
+        );
+        test_execute!(
+            Instruction::SLLI{rd: Register::SP, rs1: Register::RA, shamt: 2},
+            changes: {registers: {ra: 2 << 29}},
+            to: {registers: {sp: 0, ra: 2 << 29}},
+        );
+    }
+
+    #[test]
+    fn execute_srli() {
+        test_execute!(
+            Instruction::SRLI{rd: Register::SP, rs1: Register::RA, shamt: 5},
+            changes: {registers: {ra: 64}},
+            to: {registers: {sp: 2, ra: 64}},
+        );
+        test_execute!(
+            Instruction::SRLI{rd: Register::SP, rs1: Register::RA, shamt: 20},
+            changes: {registers: {ra: 0}},
+            to: {registers: {sp: 0, ra: 0}},
+        );
+        test_execute!(
+            Instruction::SRLI{rd: Register::SP, rs1: Register::RA, shamt: 1},
+            changes: {registers: {ra: -1}},
+            to: {registers: {sp: i32::MAX, ra: -1}},
+        );
+        test_execute!(
+            Instruction::SRLI{rd: Register::SP, rs1: Register::RA, shamt: 1},
+            changes: {registers: {ra: -1000}},
+            to: {registers: {sp: 2147483148, ra: -1000}},
+        );
+        test_execute!(
+            Instruction::SRLI{rd: Register::SP, rs1: Register::RA, shamt: 2},
+            changes: {registers: {ra: 42}},
+            to: {registers: {sp: 10, ra: 42}},
+        );
+    }
+
+    #[test]
+    fn execute_srai() {
+        test_execute!(
+            Instruction::SRAI{rd: Register::SP, rs1: Register::RA, shamt: 5},
+            changes: {registers: {ra: 64}},
+            to: {registers: {sp: 2, ra: 64}},
+        );
+        test_execute!(
+            Instruction::SRAI{rd: Register::SP, rs1: Register::RA, shamt: 20},
+            changes: {registers: {ra: 0}},
+            to: {registers: {sp: 0, ra: 0}},
+        );
+        test_execute!(
+            Instruction::SRAI{rd: Register::SP, rs1: Register::RA, shamt: 10},
+            changes: {registers: {ra: -1}},
+            to: {registers: {sp: -1, ra: -1}},
+        );
+        test_execute!(
+            Instruction::SRAI{rd: Register::SP, rs1: Register::RA, shamt: 4},
+            changes: {registers: {ra: -1000}},
+            to: {registers: {sp: -63, ra: -1000}},
+        );
+        test_execute!(
+            Instruction::SRAI{rd: Register::SP, rs1: Register::RA, shamt: 2},
+            changes: {registers: {ra: 42}},
+            to: {registers: {sp: 10, ra: 42}},
+        );
+    }
+
+    #[test]
+    fn execute_add() {
+        test_execute!(
+            Instruction::ADD{rd: Register::T3, rs1: Register::T1, rs2: Register::T2},
+            changes: {registers: {t1: 21, t2: 21}},
+            to: {registers: {t1: 21, t2: 21, t3: 42}},
+        );
+    }
+
+    #[test]
+    fn execute_sub() {
+        test_execute!(
+            Instruction::SUB { rd: Register::T3, rs1: Register::T1, rs2: Register::T2, },
+            changes: {registers: {t1: 45, t2: 3}},
+            to: {registers: {t1: 45, t2: 3, t3: 42}},
+        );
+    }
+
+    #[test]
+    fn execute_sll() {
+        test_execute!(
+            Instruction::SLL{rd: Register::T4, rs1: Register::T5, rs2: Register::T6},
+            changes: {registers: {t5: 0, t6: 4}},
+            to: {registers: {t4: 0, t5: 0, t6: 4}},
+        );
+        test_execute!(
+            Instruction::SLL{rd: Register::S1, rs1: Register::S2, rs2: Register::S3},
+            changes: {registers: {s1: 100, s2: 1, s3: 63}},
+            to: {registers: {s1: i32::MIN, s2: 1, s3: 63}},
+        );
+        test_execute!(
+            Instruction::SLL{rd: Register::S4, rs1: Register::S5, rs2: Register::S6},
+            changes: {registers: {s4: 100, s5: i32::MAX, s6: 1}},
+            to: {registers: {s4: -2, s5: i32::MAX, s6: 1}},
+        );
+        test_execute!(
+            Instruction::SLL{rd: Register::S7, rs1: Register::S8, rs2: Register::S9},
+            changes: {registers: {s7: 100, s8: 2 << 29, s9: 2}},
+            to: {registers: {s7: 0, s8: 2 << 29, s9: 2}},
+        );
+    }
+
+    #[test]
+    fn execute_slt() {
+        test_execute!(
+            Instruction::SLT{rd: Register::T4, rs1: Register::T1, rs2: Register::T3},
+            changes: {registers: {t1: 42, t3: 43}},
+            to: {registers: {t1: 42, t4: 1, t3: 43}},
+        );
+        test_execute!(
+            Instruction::SLT{rd: Register::T4, rs1: Register::T1, rs2: Register::T3},
+            changes: {registers: {t1: 42, t4: 100, t3: 42}},
+            to: {registers: {t1: 42, t4: 0, t3: 42}},
+        );
+        test_execute!(
+            Instruction::SLT{rd: Register::T4, rs1: Register::T1, rs2: Register::T3},
+            changes: {registers: {t1: 42, t3: -43}},
+            to: {registers: {t1: 42, t4: 0, t3: -43}},
+        );
+    }
+
+    #[test]
+    fn execute_sltu() {
+        test_execute!(
+            Instruction::SLTU{rd: Register::T4, rs1: Register::T1, rs2: Register::A4},
+            changes: {registers: {t1: 42, a4: 43}},
+            to: {registers: {t1: 42, t4: 1, a4: 43}},
+        );
+        test_execute!(
+            Instruction::SLTU{rd: Register::T4, rs1: Register::T1, rs2: Register::A4},
+            changes: {registers: {t1: 42, t4: 100, a4: 42}},
+            to: {registers: {t1: 42, t4: 0, a4: 42}},
+        );
+        test_execute!(
+            Instruction::SLTU{rd: Register::T4, rs1: Register::T1, rs2: Register::A4},
+            changes: {registers: {t1: 42, a4: -43}},
+            to: {registers: {t1: 42, t4: 1, a4: -43}},
+        );
+        test_execute!(
+            Instruction::SLTU{rd: Register::T4, rs1: Register::T1, rs2: Register::A4},
+            changes: {registers: {t1: 42, a4: 1}},
+            to: {registers: {t1: 42, t4: 0, a4: 1}},
+        );
+        test_execute!(
+            Instruction::SLTU{rd: Register::T4, rs1: Register::T1, rs2: Register::A4},
+            changes: {registers: {t1: 0, a4: 1}},
+            to: {registers: {t1: 0, t4: 1, a4: 1}},
+        );
+    }
+
+    #[test]
+    fn execute_or() {
+        test_execute!(
+            Instruction::OR{rd: Register::S0, rs1: Register::S1, rs2: Register::T2},
+            changes: {registers: {s1: 42, t2: -1}},
+            to: {registers: {s0: -1, s1: 42, t2: -1}},
+        );
+        test_execute!(
+            Instruction::OR{rd: Register::S2, rs1: Register::S3, rs2: Register::T3},
+            changes: {registers: {s3: 2, t3: 2}},
+            to: {registers: {s2: 2, s3: 2, t3: 2}},
+        );
+        test_execute!(
+            Instruction::OR{rd: Register::S4, rs1: Register::S5, rs2: Register::T4},
+            changes: {registers: {s5: 3, t4: 8}},
+            to: {registers: {s4: 11, s5: 3, t4: 8}},
+        );
+        test_execute!(
+            Instruction::OR{rd: Register::S4, rs1: Register::S5, rs2: Register::T5},
+            changes: {registers: {s5: 19, t5: 7}},
+            to: {registers: {s4: 23, s5: 19, t5: 7}},
+        );
+    }
+
+    #[test]
+    fn execute_srl() {
+        test_execute!(
+            Instruction::SRL{rd: Register::S10, rs1: Register::S11, rs2: Register::A0},
+            changes: {registers: {s10: 100, s11: 64, a0: 5}},
+            to: {registers: {s10: 2, s11: 64, a0: 5}},
+        );
+        test_execute!(
+            Instruction::SRL{rd: Register::A1, rs1: Register::A2, rs2: Register::A3},
+            changes: {registers: {a1: 100, a2: -1, a3: 1}},
+            to: {registers: {a1: i32::MAX, a2: -1, a3: 1}},
+        );
+        test_execute!(
+            Instruction::SRL{rd: Register::A4, rs1: Register::A5, rs2: Register::A6},
+            changes: {registers: {a4: 100, a5: -1000, a6: 1}},
+            to: {registers: {a4: 2147483148, a5: -1000, a6: 1}},
+        );
+        test_execute!(
+            Instruction::SRL{rd: Register::A4, rs1: Register::A5, rs2: Register::A6},
+            changes: {registers: {a4: 100, a5: i32::MIN, a6: 63}},
+            to: {registers: {a4: 1, a5: i32::MIN, a6: 63}},
+        );
+        test_execute!(
+            Instruction::SRL{rd: Register::A7, rs1: Register::A2, rs2: Register::A3},
+            changes: {registers: {a7: 100, a2: 42, a3: 2}},
+            to: {registers: {a7: 10, a2: 42, a3: 2}},
+        );
+    }
+
+    #[test]
+    fn execute_sra() {
+        test_execute!(
+            Instruction::SRA{rd: Register::T0, rs1: Register::T1, rs2: Register::T2},
+            changes: {registers: {t0: 100, t1: 64, t2: 5}},
+            to: {registers: {t0: 2, t1: 64, t2: 5}},
+        );
+        test_execute!(
+            Instruction::SRA{rd: Register::T3, rs1: Register::T4, rs2: Register::T5},
+            changes: {registers: {t3: 100, t4: 0, t5: 20}},
+            to: {registers: {t3: 0, t4: 0, t5: 20}},
+        );
+        test_execute!(
+            Instruction::SRA{rd: Register::T6, rs1: Register::S0, rs2: Register::TP},
+            changes: {registers: {t6: 100, s0: -1, tp: 10}},
+            to: {registers: {t6: -1, s0: -1, tp: 10}},
+        );
+        test_execute!(
+            Instruction::SRA{rd: Register::A4, rs1: Register::A5, rs2: Register::A6},
+            changes: {registers: {a4: 100, a5: i32::MIN, a6: 63}},
+            to: {registers: {a4: -1, a5: i32::MIN, a6: 63}},
+        );
+        test_execute!(
+            Instruction::SRA{rd: Register::GP, rs1: Register::SP, rs2: Register::RA},
+            changes: {registers: {gp: 100, sp: -1000, ra: 4}},
+            to: {registers: {gp: -63, sp: -1000, ra: 4}},
+        );
+        test_execute!(
+            Instruction::SRA{rd: Register::GP, rs1: Register::SP, rs2: Register::RA},
+            changes: {registers: {gp: 100, sp: 42, ra: 2}},
+            to: {registers: {gp: 10, sp: 42, ra: 2}},
+        );
+    }
+
+    #[test]
+    fn execute_xor() {
+        test_execute!(
+            Instruction::XOR{rd: Register::A0, rs1: Register::A1, rs2: Register::A2},
+            changes: {registers: {a1: 42, a2: -1}},
+            to: {registers: {a0: !(42), a1: 42, a2: -1}},
+        );
+        test_execute!(
+            Instruction::XOR{rd: Register::A2, rs1: Register::A3, rs2: Register::A4},
+            changes: {registers: {a3: 2, a4: 1}},
+            to: {registers: {a2: 3, a3: 2, a4: 1}},
+        );
+    }
+
+    #[test]
+    fn execute_and() {
+        test_execute!(
+            Instruction::AND{rd: Register::S0, rs1: Register::S1, rs2: Register::A1},
+            changes: {registers: {s1: 42, a1: -1}},
+            to: {registers: {s0: 42, s1: 42, a1: -1}},
+        );
+        test_execute!(
+            Instruction::AND{rd: Register::S2, rs1: Register::S3, rs2: Register::A2},
+            changes: {registers: {s3: 2, a2: 2}},
+            to: {registers: {s2: 2, s3: 2, a2: 2}},
+        );
+        test_execute!(
+            Instruction::AND{rd: Register::S4, rs1: Register::S5, rs2: Register::A3},
+            changes: {registers: {s5: 3, a3: 8}},
+            to: {registers: {s4: 0, s5: 3, a3: 8}},
+        );
+        test_execute!(
+            Instruction::AND{rd: Register::S4, rs1: Register::S5, rs2: Register::A4},
+            changes: {registers: {s5: 19, a4: 7}},
+            to: {registers: {s4: 3, s5: 19, a4: 7}},
+        );
+    }
+
+    #[test]
+    fn execute_lw() {
+        test_execute!(
+            Instruction::LW { rd: Register::T3, rs1: Register::T1, offset: 31, },
+            changes: {registers: {t1: 3}, memory: {34: 12}},
+            to: {registers: {t1: 3, t3: 12}, memory: {34: 12}},
+        );
+    }
+}

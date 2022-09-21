@@ -39,10 +39,7 @@ use num::Num;
 /// | 30 | -   | x30      | t5       | temporary register 5                 | caller   |
 /// | 31 | -   | x31      | t6       | temporary register 6                 | caller   |
 #[derive(Debug, Default, PartialEq, Eq)]
-pub(super) struct Registers<T>
-where
-    T: Num,
-{
+pub(super) struct Registers<T> {
     pub(super) zero: T,
     // Since zero is hard wired, we don't want to give out a mutable reference,
     // this is a compromise until I think of a better way to do this.

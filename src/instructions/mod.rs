@@ -4,6 +4,7 @@ mod funct6;
 mod funct7;
 mod immi;
 mod immu;
+mod impl_instruction_set;
 mod pseudoinstructions;
 mod rd;
 mod rs1;
@@ -16,6 +17,7 @@ use self::{
 };
 
 use crate::registers::Register;
+
 /// An representation of different instructions.
 ///
 /// Would we like to work with the raw bytes of the instructions, or simply provide a mechanism to

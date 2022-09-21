@@ -1,5 +1,6 @@
+pub mod instruction_set;
 mod instructions;
 mod integer;
 mod memory;
-mod processor;
+pub mod processor;
 mod registers;
