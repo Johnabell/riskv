@@ -14,8 +14,8 @@ impl InstructionSet for Instruction {
     }
 
     fn execute(self, processor: &mut Processor<Self::RegisterType>) -> Result<(), Exception> {
-        Ok(match self {
-            Instruction::LUI { rd, imm } => processor.registers[rd] = (imm << 12).into(),
+        match self {
+            Instruction::LUI { rd, imm } => processor.registers[rd] = imm << 12,
             Instruction::AUIPC { rd, imm } => {
                 processor.registers[rd] = processor.pc + Self::RegisterType::from(imm << 12)
             }
@@ -88,6 +88,20 @@ impl InstructionSet for Instruction {
             Instruction::AND { rd, rs1, rs2 } => {
                 processor.registers[rd] = processor.registers[rs1] & processor.registers[rs2]
             }
+            Instruction::LB { rd, rs1, offset } => {
+                processor.registers[rd] = processor.memory.load_byte(
+                    processor.registers[rs1]
+                        .wrapping_add(offset.into())
+                        .as_unsigned() as usize,
+                ) as Self::RegisterType
+            }
+            Instruction::LH { rd, rs1, offset } => {
+                processor.registers[rd] = processor.memory.load_half(
+                    processor.registers[rs1]
+                        .wrapping_add(offset.into())
+                        .as_unsigned() as usize,
+                ) as Self::RegisterType
+            }
             Instruction::LW { rd, rs1, offset } => {
                 processor.registers[rd] = processor.memory.load_word(
                     processor.registers[rs1]
@@ -95,7 +109,8 @@ impl InstructionSet for Instruction {
                         .as_unsigned() as usize,
                 )
             }
-        })
+        }
+        Ok(())
     }
 }
 
@@ -785,6 +800,34 @@ mod test {
             Instruction::AND{rd: Register::S4, rs1: Register::S5, rs2: Register::A4},
             changes: {registers: {s5: 19, a4: 7}},
             to: {registers: {s4: 3, s5: 19, a4: 7}},
+        );
+    }
+
+    #[test]
+    fn execute_lb() {
+        test_execute!(
+            Instruction::LB { rd: Register::T3, rs1: Register::T1, offset: 31, },
+            changes: {registers: {t1: 0}, memory: {31: 21}},
+            to: {registers: {t3: 21}, memory: {31: 21}},
+        );
+        test_execute!(
+            Instruction::LB { rd: Register::T3, rs1: Register::T1, offset: 31, },
+            changes: {registers: {t1:0}, memory: {31: -1}},
+            to: {registers: {t3: -1}, memory: {31: -1}},
+        );
+    }
+
+    #[test]
+    fn execute_lh() {
+        test_execute!(
+            Instruction::LH { rd: Register::T3, rs1: Register::T1, offset: 21, },
+            changes: {registers: {t1: 21}, memory: {42: 12}},
+            to: {registers: {t1: 21, t3: 12}, memory: {42: 12}},
+        );
+        test_execute!(
+            Instruction::LH { rd: Register::T3, rs1: Register::T1, offset: 21, },
+            changes: {registers: {t1: 21}, memory: {42: -12}},
+            to: {registers: {t1: 21, t3: -12}, memory: {42: -12}},
         );
     }
 
