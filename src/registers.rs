@@ -1,5 +1,3 @@
-use num::Num;
-
 /// Struct representing the RISK-V Processor.
 ///
 /// The processor contains the following registers.
@@ -187,10 +185,7 @@ impl From<u8> for Register {
     }
 }
 
-impl<T> std::ops::Index<u8> for Registers<T>
-where
-    T: Num,
-{
+impl<T> std::ops::Index<u8> for Registers<T> {
     type Output = T;
 
     fn index(&self, index: u8) -> &Self::Output {
@@ -232,10 +227,7 @@ where
     }
 }
 
-impl<T> std::ops::Index<Register> for Registers<T>
-where
-    T: Num,
-{
+impl<T> std::ops::Index<Register> for Registers<T> {
     type Output = T;
 
     fn index(&self, index: Register) -> &Self::Output {
@@ -276,10 +268,7 @@ where
     }
 }
 
-impl<T> std::ops::IndexMut<u8> for Registers<T>
-where
-    T: Num,
-{
+impl<T> std::ops::IndexMut<u8> for Registers<T> {
     fn index_mut(&mut self, index: u8) -> &mut Self::Output {
         match index {
             0 => &mut self._zero,
@@ -319,10 +308,7 @@ where
     }
 }
 
-impl<T> std::ops::IndexMut<Register> for Registers<T>
-where
-    T: Num,
-{
+impl<T> std::ops::IndexMut<Register> for Registers<T> {
     fn index_mut(&mut self, index: Register) -> &mut Self::Output {
         match index {
             Register::ZERO => &mut self._zero,
