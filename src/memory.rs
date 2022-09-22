@@ -1,34 +1,23 @@
-use std::marker::PhantomData;
-
-use num::Zero;
-
-use crate::integer::AsIndex;
-
 #[derive(Debug, Default, PartialEq, Eq)]
-pub struct Memory<Signed, Unsigned> {
-    data: Vec<Signed>, // TODO: consider Vec<Option<Signed>> for tracking uninitialised memory
-    _marker2: PhantomData<Unsigned>,
+pub struct Memory {
+    data: Vec<u8>,
 }
 
-impl<Signed, Unsigned> Memory<Signed, Unsigned>
-where
-    Signed: Copy + Clone + Zero,
-    Unsigned: AsIndex,
-{
+impl Memory {
     /// Get 32 bits of memory
-    pub fn load_word(&self, location: Unsigned) -> Signed {
-        self.data
-            .get(location.as_index())
-            .cloned()
-            .unwrap_or_else(Signed::zero)
+    pub fn load_word(&mut self, location: usize) -> i32 {
+        if location + 4 > self.data.len() {
+            self.data.resize(location + 4, 0);
+        }
+        i32::from_le_bytes(self.data[location..location + 4].try_into().unwrap())
     }
 
     /// Set 32 bits of memory
-    pub fn store_word(&mut self, location: Unsigned, value: Signed) {
-        if location.as_index() > self.data.len() {
-            self.data.resize(location.as_index() + 1, Signed::zero());
+    pub fn store_word(&mut self, location: usize, value: i32) {
+        if location + 4 > self.data.len() {
+            self.data.resize(location + 4, 0);
         }
-        self.data[location.as_index()] = value;
+        self.data[location..location + 4].copy_from_slice(&value.to_le_bytes());
     }
 }
 
