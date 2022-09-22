@@ -275,6 +275,30 @@ pub(super) enum Instruction {
         rs2: Register,
     },
 
+    /// # Load Byte
+    ///
+    /// Loads a 8-bit value from memory and sign-extends this to XLEN bits before storing it in
+    /// register rd.
+    ///
+    /// `rd <- sext(M[rs1 + sext(offset)][7:0])`
+    LB {
+        rd: Register,
+        rs1: Register,
+        offset: i16,
+    },
+
+    /// # Load Byte
+    ///
+    /// Loads a 16-bit value from memory and sign-extends this to XLEN bits before storing it in
+    /// register rd.
+    ///
+    /// `rd <- sext(M[rs1 + sext(offset)][15:0])`
+    LH {
+        rd: Register,
+        rs1: Register,
+        offset: i16,
+    },
+
     /// # Load Word
     ///
     /// Loads a 32-bit value from memory and sign-extends this to XLEN bits before storing it in
@@ -413,6 +437,16 @@ impl From<u32> for Instruction {
                 ),
             },
             0b_0000011 => match *Funct3::from(value) {
+                0b_000 => Instruction::LB {
+                    rd: *Rd::from(value),
+                    rs1: *Rs1::from(value),
+                    offset: *ImmI::from(value),
+                },
+                0b_001 => Instruction::LH {
+                    rd: *Rd::from(value),
+                    rs1: *Rs1::from(value),
+                    offset: *ImmI::from(value),
+                },
                 0b_010 => Instruction::LW {
                     rd: *Rd::from(value),
                     rs1: *Rs1::from(value),
@@ -693,6 +727,29 @@ mod test {
         );
     }
 
+    #[test]
+    fn lb_from_i32() {
+        assert_eq!(
+            Instruction::from(u32::from_le(0b_0000001_11001_01100_000_11100_0000011)),
+            Instruction::LB {
+                rd: Register::T3,
+                rs1: Register::A2,
+                offset: 57,
+            }
+        );
+    }
+
+    #[test]
+    fn lh_from_i32() {
+        assert_eq!(
+            Instruction::from(u32::from_le(0b_0000001_11010_01100_001_11100_0000011)),
+            Instruction::LH {
+                rd: Register::T3,
+                rs1: Register::A2,
+                offset: 58,
+            }
+        );
+    }
     #[test]
     fn lw_from_i32() {
         assert_eq!(
