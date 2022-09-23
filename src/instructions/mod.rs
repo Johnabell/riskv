@@ -287,7 +287,7 @@ pub(super) enum Instruction {
         offset: i16,
     },
 
-    /// # Load Byte
+    /// # Load Half
     ///
     /// Loads a 16-bit value from memory and sign-extends this to XLEN bits before storing it in
     /// register rd.
@@ -306,6 +306,30 @@ pub(super) enum Instruction {
     ///
     /// `rd <- sext(M[rs1 + sext(offset)][31:0])`
     LW {
+        rd: Register,
+        rs1: Register,
+        offset: i16,
+    },
+
+    /// # Load Byte Unsigned
+    ///
+    /// Loads a 8-bit value from memory and zero-extends this to XLEN bits before storing it in
+    /// register rd.
+    ///
+    /// `rd <- M[rs1 + sext(offset)][7:0]`
+    LBU {
+        rd: Register,
+        rs1: Register,
+        offset: i16,
+    },
+
+    /// # Load Half Unsigned
+    ///
+    /// Loads a 16-bit value from memory and zero-extends this to XLEN bits before storing it in
+    /// register rd.
+    ///
+    /// `rd <- M[rs1 + sext(offset)][15:0]`
+    LHU {
         rd: Register,
         rs1: Register,
         offset: i16,
@@ -448,6 +472,16 @@ impl From<u32> for Instruction {
                     offset: *ImmI::from(value),
                 },
                 0b_010 => Instruction::LW {
+                    rd: *Rd::from(value),
+                    rs1: *Rs1::from(value),
+                    offset: *ImmI::from(value),
+                },
+                0b_100 => Instruction::LBU {
+                    rd: *Rd::from(value),
+                    rs1: *Rs1::from(value),
+                    offset: *ImmI::from(value),
+                },
+                0b_101 => Instruction::LHU {
                     rd: *Rd::from(value),
                     rs1: *Rs1::from(value),
                     offset: *ImmI::from(value),
@@ -750,6 +784,7 @@ mod test {
             }
         );
     }
+
     #[test]
     fn lw_from_i32() {
         assert_eq!(
@@ -758,6 +793,30 @@ mod test {
                 rd: Register::T3,
                 rs1: Register::A2,
                 offset: 56,
+            }
+        );
+    }
+
+    #[test]
+    fn lbu_from_i32() {
+        assert_eq!(
+            Instruction::from(u32::from_le(0b_0000001_11011_01100_100_11100_0000011)),
+            Instruction::LBU {
+                rd: Register::T3,
+                rs1: Register::A2,
+                offset: 59,
+            }
+        );
+    }
+
+    #[test]
+    fn lhu_from_i32() {
+        assert_eq!(
+            Instruction::from(u32::from_le(0b_0000001_11100_01100_101_11100_0000011)),
+            Instruction::LHU {
+                rd: Register::T3,
+                rs1: Register::A2,
+                offset: 60,
             }
         );
     }
