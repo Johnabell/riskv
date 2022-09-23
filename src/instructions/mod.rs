@@ -10,10 +10,11 @@ mod rd;
 mod rs1;
 mod rs2;
 mod shamt;
+mod simmi;
 
 use self::{
     funct3::Funct3, funct6::Funct6, funct7::Funct7, immi::ImmI, immu::ImmU, rd::Rd, rs1::Rs1,
-    rs2::Rs2, shamt::Shamt,
+    rs2::Rs2, shamt::Shamt, simmi::SImmI,
 };
 
 use crate::registers::Register;
@@ -334,6 +335,39 @@ pub(super) enum Instruction {
         rs1: Register,
         offset: i16,
     },
+
+    /// # Store Byte
+    ///
+    /// Store 8-bit, values from the low bits of register rs2 to memory.
+    ///
+    /// M[rs1 + sext(offset)] = rs2[7:0]
+    SB {
+        rs1: Register,
+        rs2: Register,
+        offset: i16,
+    },
+
+    /// # Store Half
+    ///
+    /// Store 16-bit, values from the low bits of register rs2 to memory.
+    ///
+    /// M[rs1 + sext(offset)] = rs2[15:0]
+    SH {
+        rs1: Register,
+        rs2: Register,
+        offset: i16,
+    },
+
+    /// # Store Word
+    ///
+    /// Store 32-bit, values from the low bits of register rs2 to memory.
+    ///
+    /// M[rs1 + sext(offset)] = rs2[31:0]
+    SW {
+        rs1: Register,
+        rs2: Register,
+        offset: i16,
+    },
 }
 
 impl From<u32> for Instruction {
@@ -485,6 +519,27 @@ impl From<u32> for Instruction {
                     rd: *Rd::from(value),
                     rs1: *Rs1::from(value),
                     offset: *ImmI::from(value),
+                },
+                _ => unimplemented!(
+                    "The given instruction is not yet implemented {:#034b}",
+                    value.to_le()
+                ),
+            },
+            0b_0100011 => match *Funct3::from(value) {
+                0b_000 => Instruction::SB {
+                    rs1: *Rs1::from(value),
+                    rs2: *Rs2::from(value),
+                    offset: *SImmI::from(value),
+                },
+                0b_001 => Instruction::SH {
+                    rs1: *Rs1::from(value),
+                    rs2: *Rs2::from(value),
+                    offset: *SImmI::from(value),
+                },
+                0b_010 => Instruction::SW {
+                    rs1: *Rs1::from(value),
+                    rs2: *Rs2::from(value),
+                    offset: *SImmI::from(value),
                 },
                 _ => unimplemented!(
                     "The given instruction is not yet implemented {:#034b}",
@@ -817,6 +872,42 @@ mod test {
                 rd: Register::T3,
                 rs1: Register::A2,
                 offset: 60,
+            }
+        );
+    }
+
+    #[test]
+    fn sb_from_i32() {
+        assert_eq!(
+            Instruction::from(u32::from_le(0b_0000001_11101_01101_000_11101_0100011)),
+            Instruction::SB {
+                rs1: Register::A3,
+                rs2: Register::T4,
+                offset: 61,
+            }
+        );
+    }
+
+    #[test]
+    fn sh_from_i32() {
+        assert_eq!(
+            Instruction::from(u32::from_le(0b_0000001_11101_01101_001_11110_0100011)),
+            Instruction::SH {
+                rs1: Register::A3,
+                rs2: Register::T4,
+                offset: 62,
+            }
+        );
+    }
+
+    #[test]
+    fn sw_from_i32() {
+        assert_eq!(
+            Instruction::from(u32::from_le(0b_0000001_11111_01101_010_11111_0100011)),
+            Instruction::SW {
+                rs1: Register::A3,
+                rs2: Register::T6,
+                offset: 63,
             }
         );
     }
