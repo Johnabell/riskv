@@ -123,6 +123,24 @@ impl InstructionSet for Instruction {
                         .as_unsigned() as usize,
                 ) as u16 as Self::RegisterType
             }
+            Instruction::SB { rs1, rs2, offset } => processor.memory.store_byte(
+                processor.registers[rs1]
+                    .wrapping_add(offset.into())
+                    .as_unsigned() as usize,
+                processor.registers[rs2] as i8,
+            ),
+            Instruction::SH { rs1, rs2, offset } => processor.memory.store_half(
+                processor.registers[rs1]
+                    .wrapping_add(offset.into())
+                    .as_unsigned() as usize,
+                processor.registers[rs2] as i16,
+            ),
+            Instruction::SW { rs1, rs2, offset } => processor.memory.store_word(
+                processor.registers[rs1]
+                    .wrapping_add(offset.into())
+                    .as_unsigned() as usize,
+                processor.registers[rs2],
+            ),
         }
         Ok(())
     }
@@ -879,6 +897,43 @@ mod test {
             Instruction::LHU { rd: Register::T3, rs1: Register::T1, offset: 21, },
             changes: {registers: {t1: 21}, memory: {42: -1}},
             to: {registers: {t1: 21, t3: u16::MAX as i32}, memory: {42: -1}},
+        );
+    }
+
+    #[test]
+    fn execute_sb() {
+        test_execute!(
+            Instruction::SB { rs1: Register::T1, rs2: Register::T3, offset: 0, },
+            changes: {registers: {t1: 0, t3: 21}, memory: {4: 1}},
+            to: {registers: {t3: 21}, memory: {0: 21, 4: 1}},
+        );
+        test_execute!(
+            Instruction::SB { rs1: Register::T1, rs2: Register::T3, offset: 31, },
+            changes: {registers: {t1:0, t3: -1}, memory: {32: 0}},
+            to: {registers: {t3: -1}, memory: {31: -1, 32: 0}},
+        );
+    }
+
+    #[test]
+    fn execute_sh() {
+        test_execute!(
+            Instruction::SH { rs1: Register::T1, rs2: Register::T3, offset: 21, },
+            changes: {registers: {t1: 21, t3: 12}, memory: {44: 1}},
+            to: {registers: {t1: 21, t3: 12}, memory: {42: 12, 44: 1}},
+        );
+        test_execute!(
+            Instruction::SH { rs1: Register::T1, rs2: Register::T3, offset: 21, },
+            changes: {registers: {t1: 21, t3: -12}, memory: {44: 0}},
+            to: {registers: {t1: 21, t3: -12}, memory: {42: -12, 44: 0}},
+        );
+    }
+
+    #[test]
+    fn execute_sw() {
+        test_execute!(
+            Instruction::SW {  rs1: Register::T1,rs2: Register::T3, offset: 31, },
+            changes: {registers: {t1: 3, t3: 12}},
+            to: {registers: {t1: 3, t3: 12}, memory: {34: 12}},
         );
     }
 }
