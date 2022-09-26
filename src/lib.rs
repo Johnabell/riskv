@@ -1,3 +1,4 @@
+mod csr;
 pub mod instruction_set;
 mod instructions;
 mod integer;

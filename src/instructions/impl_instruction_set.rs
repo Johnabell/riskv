@@ -1,3 +1,4 @@
+use crate::csr::CSR32;
 use crate::instruction_set::{Exception, InstructionSet};
 use crate::integer::{AsSigned, AsUnsigned};
 use crate::processor::Processor;
@@ -8,12 +9,16 @@ impl InstructionSet for Instruction {
     const SHIFT_MASK: i32 = 0b_00000000_00000000_00000000_00011111;
 
     type RegisterType = i32;
+    type CSRType = CSR32;
 
     fn decode(raw_instruction: u32) -> Result<Self, Exception> {
         Ok(raw_instruction.into())
     }
 
-    fn execute(self, processor: &mut Processor<Self::RegisterType>) -> Result<(), Exception> {
+    fn execute(
+        self,
+        processor: &mut Processor<Self::RegisterType, Self::CSRType>,
+    ) -> Result<(), Exception> {
         match self {
             Instruction::LUI { rd, imm } => processor.registers[rd] = imm << 12,
             Instruction::AUIPC { rd, imm } => {
@@ -186,7 +191,7 @@ mod test {
             $(, pc: $program_counter1:expr)?
             $(,)?
         ) => {
-            Processor {
+            Processor::<i32, CSR32> {
                 registers: register_state!($register_state)
                 $(, memory: memory_state!($memory_state))?
                 $(, pc: $program_counter1)?
@@ -209,7 +214,7 @@ mod test {
         };
     }
     macro_rules! test_execute {
-        ($instruction:expr, changes: $initial_state:tt, to: $final_state:tt $(,)?) => {
+        ($instruction:expr, changes: $initial_state:tt, to: $final_state:tt $(,)?) => {{
             // Arrange
             let mut processor = processor_state!($initial_state);
 
@@ -217,11 +222,15 @@ mod test {
             $instruction.execute(&mut processor).unwrap();
 
             // Assert
-            assert_eq!(processor, processor_state!($final_state));
-        };
+            let expected_state = processor_state!($final_state);
+            assert_eq!(processor.registers, expected_state.registers);
+            assert_eq!(processor.memory, expected_state.memory);
+            assert_eq!(processor.pc, expected_state.pc);
+            processor
+        }};
     }
     macro_rules! test_execute_many {
-        ($instructions:expr, changes: $initial_state:tt, to: $final_state:tt $(,)?) => {
+        ($instructions:expr, changes: $initial_state:tt, to: $final_state:tt $(,)?) => {{
             // Arrange
             let mut processor = processor_state!($initial_state);
 
@@ -231,8 +240,12 @@ mod test {
             }
 
             // Assert
-            assert_eq!(processor, processor_state!($final_state));
-        };
+            let expected_state = processor_state!($final_state);
+            assert_eq!(processor.registers, expected_state.registers);
+            assert_eq!(processor.memory, expected_state.memory);
+            assert_eq!(processor.pc, expected_state.pc);
+            processor
+        }};
     }
 
     #[test]
