@@ -109,6 +109,20 @@ impl InstructionSet for Instruction {
                         .as_unsigned() as usize,
                 )
             }
+            Instruction::LBU { rd, rs1, offset } => {
+                processor.registers[rd] = processor.memory.load_byte(
+                    processor.registers[rs1]
+                        .wrapping_add(offset.into())
+                        .as_unsigned() as usize,
+                ) as u8 as Self::RegisterType
+            }
+            Instruction::LHU { rd, rs1, offset } => {
+                processor.registers[rd] = processor.memory.load_half(
+                    processor.registers[rs1]
+                        .wrapping_add(offset.into())
+                        .as_unsigned() as usize,
+                ) as u16 as Self::RegisterType
+            }
         }
         Ok(())
     }
@@ -837,6 +851,34 @@ mod test {
             Instruction::LW { rd: Register::T3, rs1: Register::T1, offset: 31, },
             changes: {registers: {t1: 3}, memory: {34: 12}},
             to: {registers: {t1: 3, t3: 12}, memory: {34: 12}},
+        );
+    }
+
+    #[test]
+    fn execute_lbu() {
+        test_execute!(
+            Instruction::LBU { rd: Register::T3, rs1: Register::T1, offset: 31, },
+            changes: {registers: {t1: 0}, memory: {31: 21}},
+            to: {registers: {t3: 21}, memory: {31: 21}},
+        );
+        test_execute!(
+            Instruction::LBU { rd: Register::T3, rs1: Register::T1, offset: 31, },
+            changes: {registers: {t1:0}, memory: {31: -1}},
+            to: {registers: {t3: u8::MAX as i32}, memory: {31: -1}},
+        );
+    }
+
+    #[test]
+    fn execute_lhu() {
+        test_execute!(
+            Instruction::LHU { rd: Register::T3, rs1: Register::T1, offset: 21, },
+            changes: {registers: {t1: 21}, memory: {42: 12}},
+            to: {registers: {t1: 21, t3: 12}, memory: {42: 12}},
+        );
+        test_execute!(
+            Instruction::LHU { rd: Register::T3, rs1: Register::T1, offset: 21, },
+            changes: {registers: {t1: 21}, memory: {42: -1}},
+            to: {registers: {t1: 21, t3: u16::MAX as i32}, memory: {42: -1}},
         );
     }
 }
