@@ -286,4 +286,86 @@ mod test {
         assert!(!is_positive_i12(neg_1));
         assert!(is_positive_i12(max_i12));
     }
+
+    #[test]
+    fn iter_test() {
+        let pseudoinstruction = PseudoinstructionMappingIter::Three(
+            Instruction::ADD {
+                rd: Register::SP,
+                rs1: Register::A0,
+                rs2: Register::A2,
+            },
+            Instruction::SUB {
+                rd: Register::SP,
+                rs1: Register::A0,
+                rs2: Register::A1,
+            },
+            Instruction::OR {
+                rd: Register::SP,
+                rs1: Register::A0,
+                rs2: Register::A1,
+            },
+        );
+        assert_eq!(
+            pseudoinstruction.collect::<Vec<_>>(),
+            vec![
+                Instruction::ADD {
+                    rd: Register::SP,
+                    rs1: Register::A0,
+                    rs2: Register::A2,
+                },
+                Instruction::SUB {
+                    rd: Register::SP,
+                    rs1: Register::A0,
+                    rs2: Register::A1,
+                },
+                Instruction::OR {
+                    rd: Register::SP,
+                    rs1: Register::A0,
+                    rs2: Register::A1,
+                },
+            ]
+        );
+    }
+
+    #[test]
+    fn rev_iter_test() {
+        let pseudoinstruction = PseudoinstructionMappingIter::Three(
+            Instruction::ADD {
+                rd: Register::SP,
+                rs1: Register::A0,
+                rs2: Register::A2,
+            },
+            Instruction::SUB {
+                rd: Register::SP,
+                rs1: Register::A0,
+                rs2: Register::A1,
+            },
+            Instruction::OR {
+                rd: Register::SP,
+                rs1: Register::A0,
+                rs2: Register::A1,
+            },
+        );
+        assert_eq!(
+            pseudoinstruction.rev().collect::<Vec<_>>(),
+            vec![
+                Instruction::OR {
+                    rd: Register::SP,
+                    rs1: Register::A0,
+                    rs2: Register::A1,
+                },
+                Instruction::SUB {
+                    rd: Register::SP,
+                    rs1: Register::A0,
+                    rs2: Register::A1,
+                },
+                Instruction::ADD {
+                    rd: Register::SP,
+                    rs1: Register::A0,
+                    rs2: Register::A2,
+                },
+            ]
+        );
+    }
 }
