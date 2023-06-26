@@ -1,4 +1,4 @@
-use crate::csr::CSR32;
+use crate::csr::{CSR, CSR32};
 use crate::instruction_set::{Exception, InstructionSet};
 use crate::integer::{AsSigned, AsUnsigned};
 use crate::processor::Processor;
@@ -146,6 +146,9 @@ impl InstructionSet for Instruction {
                     .as_unsigned() as usize,
                 processor.registers[rs2],
             ),
+            Instruction::CSRRW { rd, rs1, csr } => {
+                processor.registers[rd] = processor.csrs.read_write(csr, processor.registers[rs1])
+            }
         }
         Ok(())
     }
@@ -184,17 +187,33 @@ mod test {
             memory_state!($($location: $value,)*)
         };
     }
+    macro_rules! csr_state {
+        ($($index:literal: $value:expr),* $(,)?) => {
+            {
+                let csr = CSR32::default();
+                $(
+                    csr.read_write($index, $value);
+                )*
+                csr
+            }
+        };
+        ({$($location:literal: $value:expr),* $(,)?}) => {
+            csr_state!($($location: $value,)*)
+        };
+    }
     macro_rules! processor_state {
         (
             registers: $register_state:tt
             $(, memory: $memory_state:tt)?
             $(, pc: $program_counter1:expr)?
+            $(, csr: $csr:tt)?
             $(,)?
         ) => {
             Processor::<i32, CSR32> {
                 registers: register_state!($register_state)
                 $(, memory: memory_state!($memory_state))?
                 $(, pc: $program_counter1)?
+                $(, csrs: csr_state!($csr))?
                 , ..Default::default()
             }
         };
@@ -203,6 +222,7 @@ mod test {
                 registers: $register_state:tt
                 $(, memory: $memory_state:tt)?
                 $(, pc: $program_counter2:expr)?
+                $(, csr: $csr:tt)?
                 $(,)?
             }
         ) => {
@@ -210,6 +230,7 @@ mod test {
                 registers: $register_state
                 $(, memory: $memory_state)?
                 $(, pc: $program_counter2)?
+                $(, csr: $csr)?
             )
         };
     }
@@ -226,6 +247,7 @@ mod test {
             assert_eq!(processor.registers, expected_state.registers);
             assert_eq!(processor.memory, expected_state.memory);
             assert_eq!(processor.pc, expected_state.pc);
+            assert_eq!(processor.csrs, expected_state.csrs);
             processor
         }};
     }
@@ -244,6 +266,7 @@ mod test {
             assert_eq!(processor.registers, expected_state.registers);
             assert_eq!(processor.memory, expected_state.memory);
             assert_eq!(processor.pc, expected_state.pc);
+            assert_eq!(processor.csrs, expected_state.csrs);
             processor
         }};
     }
@@ -947,6 +970,20 @@ mod test {
             Instruction::SW {  rs1: Register::T1,rs2: Register::T3, offset: 31, },
             changes: {registers: {t1: 3, t3: 12}},
             to: {registers: {t1: 3, t3: 12}, memory: {34: 12}},
+        );
+    }
+
+    #[test]
+    fn execute_csrrw() {
+        test_execute!(
+            Instruction::CSRRW { rd: Register::A0, rs1: Register::RA, csr: 20 },
+            changes: {registers: {a0: 3, ra: 12}},
+            to: {registers: {a0: 0, ra: 12}, csr: {20: 12}},
+        );
+        test_execute!(
+            Instruction::CSRRW { rd: Register::T1, rs1: Register::T0, csr: 5 },
+            changes: {registers: {t1: 3, t0: 12}, csr: {5: 42}},
+            to: {registers: {t1: 42, t0: 12}, csr: {5: 12}},
         );
     }
 }

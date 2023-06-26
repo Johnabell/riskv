@@ -1,4 +1,5 @@
 #![allow(clippy::unusual_byte_groupings, clippy::upper_case_acronyms)]
+mod csr;
 mod funct3;
 mod funct6;
 mod funct7;
@@ -13,8 +14,8 @@ mod shamt;
 mod simmi;
 
 use self::{
-    funct3::Funct3, funct6::Funct6, funct7::Funct7, immi::ImmI, immu::ImmU, rd::Rd, rs1::Rs1,
-    rs2::Rs2, shamt::Shamt, simmi::SImmI,
+    csr::CSR, funct3::Funct3, funct6::Funct6, funct7::Funct7, immi::ImmI, immu::ImmU, rd::Rd,
+    rs1::Rs1, rs2::Rs2, shamt::Shamt, simmi::SImmI,
 };
 
 use crate::registers::Register;
@@ -368,6 +369,22 @@ pub(super) enum Instruction {
         rs2: Register,
         offset: i16,
     },
+
+    /// # Atomic CSR read write
+    ///
+    /// Atomically swaps values in the CSRs and integer registers.
+    /// CSRRW reads the old value of the CSR, zero-extends the value to XLEN
+    /// bits, then writes it to integer register rd.
+    /// The initial value in rs1 is written to the CSR.
+    /// If rd=x0, then the instruction shall not read the CSR and shall not
+    /// cause any of the side effects that might occur on a CSR read.
+    ///
+    /// t = CSRs[csr]; CSRs[csr] = rs1; rd = t
+    CSRRW {
+        rd: Register,
+        rs1: Register,
+        csr: u16,
+    },
 }
 
 impl From<u32> for Instruction {
@@ -540,6 +557,17 @@ impl From<u32> for Instruction {
                     rs1: *Rs1::from(value),
                     rs2: *Rs2::from(value),
                     offset: *SImmI::from(value),
+                },
+                _ => unimplemented!(
+                    "The given instruction is not yet implemented {:#034b}",
+                    value.to_le()
+                ),
+            },
+            0b_1110011 => match *Funct3::from(value) {
+                0b_001 => Instruction::CSRRW {
+                    rd: *Rd::from(value),
+                    rs1: *Rs1::from(value),
+                    csr: *CSR::from(value),
                 },
                 _ => unimplemented!(
                     "The given instruction is not yet implemented {:#034b}",
@@ -908,6 +936,18 @@ mod test {
                 rs1: Register::A3,
                 rs2: Register::T6,
                 offset: 63,
+            }
+        );
+    }
+
+    #[test]
+    fn csrrw_from_i32() {
+        assert_eq!(
+            Instruction::from(u32::from_le(0b_0001001_11111_01111_001_11011_1110011)),
+            Instruction::CSRRW {
+                rd: Register::S11,
+                rs1: Register::A5,
+                csr: 319,
             }
         );
     }
