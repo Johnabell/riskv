@@ -4,9 +4,9 @@ const CSR_SIZE: usize = 4096;
 
 pub trait CSR {
     type Register;
-    fn read_write(&self, index: usize, value: Self::Register) -> Self::Register;
-    fn set_bits(&self, index: usize, value: Self::Register) -> Self::Register;
-    fn clear_bits(&self, index: usize, value: Self::Register) -> Self::Register;
+    fn read_write(&self, index: u16, value: Self::Register) -> Self::Register;
+    fn set_bits(&self, index: u16, value: Self::Register) -> Self::Register;
+    fn clear_bits(&self, index: u16, value: Self::Register) -> Self::Register;
 }
 
 #[derive(Debug)]
@@ -36,19 +36,31 @@ macro_rules! implement_csr {
         impl CSR for $struct_name {
             type Register = $register_type;
 
-            fn read_write(&self, index: usize, value: Self::Register) -> Self::Register {
-                self.registers[index].swap(value, SeqCst)
+            fn read_write(&self, index: u16, value: Self::Register) -> Self::Register {
+                self.registers[index as usize].swap(value, SeqCst)
             }
 
-            fn set_bits(&self, index: usize, value: Self::Register) -> Self::Register {
-                self.registers[index].fetch_or(value, SeqCst)
+            fn set_bits(&self, index: u16, value: Self::Register) -> Self::Register {
+                self.registers[index as usize].fetch_or(value, SeqCst)
             }
 
-            fn clear_bits(&self, index: usize, value: Self::Register) -> Self::Register {
-                self.registers[index].fetch_and(!value, SeqCst)
+            fn clear_bits(&self, index: u16, value: Self::Register) -> Self::Register {
+                self.registers[index as usize].fetch_and(!value, SeqCst)
             }
         }
     };
+}
+
+#[cfg(test)]
+impl PartialEq for CSR32 {
+    fn eq(&self, other: &Self) -> bool {
+        for (index, value) in self.registers.iter().enumerate() {
+            if value.load(SeqCst) != other.registers[index].load(SeqCst) {
+                return false;
+            }
+        }
+        true
+    }
 }
 
 implement_csr!(CSR32, i32);
