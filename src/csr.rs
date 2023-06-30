@@ -40,7 +40,7 @@ pub trait CSR {
 /// Additionally some registers are read only.
 #[derive(Debug)]
 pub struct CSR32 {
-    registers: Vec<AtomicI32>,
+    registers: Box<[AtomicI32]>,
 }
 
 /// The 64-bit control status registers.
@@ -63,7 +63,7 @@ pub struct CSR32 {
 /// Additionally some registers are read only.
 #[derive(Debug)]
 pub struct CSR64 {
-    registers: Vec<AtomicI64>,
+    registers: Box<[AtomicI64]>,
 }
 
 macro_rules! implement_csr {
@@ -72,7 +72,9 @@ macro_rules! implement_csr {
             fn new() -> Self {
                 let mut registers = Vec::default();
                 registers.resize_with(CSR_SIZE, Default::default);
-                Self { registers }
+                Self {
+                    registers: registers.into_boxed_slice(),
+                }
             }
         }
         impl Default for $struct_name {
