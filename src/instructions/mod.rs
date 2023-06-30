@@ -341,7 +341,7 @@ pub(super) enum Instruction {
     ///
     /// Store 8-bit, values from the low bits of register rs2 to memory.
     ///
-    /// M[rs1 + sext(offset)] = rs2[7:0]
+    /// `M[rs1 + sext(offset)] = rs2[7:0]`
     SB {
         rs1: Register,
         rs2: Register,
@@ -352,7 +352,7 @@ pub(super) enum Instruction {
     ///
     /// Store 16-bit, values from the low bits of register rs2 to memory.
     ///
-    /// M[rs1 + sext(offset)] = rs2[15:0]
+    /// `M[rs1 + sext(offset)] = rs2[15:0]`
     SH {
         rs1: Register,
         rs2: Register,
@@ -363,7 +363,7 @@ pub(super) enum Instruction {
     ///
     /// Store 32-bit, values from the low bits of register rs2 to memory.
     ///
-    /// M[rs1 + sext(offset)] = rs2[31:0]
+    /// `M[rs1 + sext(offset)] = rs2[31:0]`
     SW {
         rs1: Register,
         rs2: Register,
