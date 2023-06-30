@@ -401,6 +401,22 @@ pub(super) enum Instruction {
         rs1: Register,
         csr: u16,
     },
+
+    /// # Atomic CSR read write
+    ///
+    /// Reads the value of the CSR, zero-extends the value to XLEN bits, and
+    /// writes it to integer register rd. The initial value in integer register
+    /// rs1 is treated as a bit mask that specifies bit positions to be cleared
+    /// in the CSR. Any bit that is high in rs1 will cause the corresponding
+    /// bit to be cleared in the CSR, if that CSR bit is writable. Other bits
+    /// in the CSR are unaffected.
+    ///
+    /// `t = CSRs[csr]; CSRs[csr] = t & ∼rs1; rd = t`
+    CSRRC {
+        rd: Register,
+        rs1: Register,
+        csr: u16,
+    },
 }
 
 impl From<u32> for Instruction {
@@ -586,6 +602,11 @@ impl From<u32> for Instruction {
                     csr: *CSR::from(value),
                 },
                 0b_010 => Instruction::CSRRS {
+                    rd: *Rd::from(value),
+                    rs1: *Rs1::from(value),
+                    csr: *CSR::from(value),
+                },
+                0b_011 => Instruction::CSRRC {
                     rd: *Rd::from(value),
                     rs1: *Rs1::from(value),
                     csr: *CSR::from(value),
@@ -981,6 +1002,18 @@ mod test {
                 rd: Register::S3,
                 rs1: Register::A1,
                 csr: 1343,
+            }
+        );
+    }
+
+    #[test]
+    fn csrrc_from_i32() {
+        assert_eq!(
+            Instruction::from(u32::from_le(0b_1101001_11111_01001_011_10111_1110011)),
+            Instruction::CSRRC {
+                rd: Register::S7,
+                rs1: Register::S1,
+                csr: 3391,
             }
         );
     }

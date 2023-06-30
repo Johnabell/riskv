@@ -39,7 +39,7 @@ Feel free to contribute and get involved if you would like to learn more about a
   - [ ] FENCE.I
   - [x] CSRRW
   - [x] CSRRS
-  - [ ] CSRRC
+  - [x] CSRRC
   - [ ] CSRRWI
   - [ ] CSRRSI
   - [ ] CSRRCI

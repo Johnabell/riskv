@@ -98,7 +98,10 @@ impl InstructionSet for Instruction {
             }
             Instruction::CSRRS { rd, rs1, csr } => {
                 processor.registers[rd] = processor.csrs.set_bits(csr, processor.registers[rs1])
-            },
+            }
+            Instruction::CSRRC { rd, rs1, csr } => {
+                processor.registers[rd] = processor.csrs.clear_bits(csr, processor.registers[rs1])
+            }
             Instruction::LB { rd, rs1, offset } => {
                 processor.registers[rd] = processor.memory.load_byte(
                     processor.registers[rs1]
@@ -1001,6 +1004,20 @@ mod test {
             Instruction::CSRRS { rd: Register::T1, rs1: Register::T0, csr: 5 },
             changes: {registers: {t1: 3, t0: 0b10010010}, csr: {5: 0b10000101}},
             to: {registers: {t1: 0b10000101, t0: 0b10010010}, csr: {5: 0b10010111}},
+        );
+    }
+
+    #[test]
+    fn execute_csrrc() {
+        test_execute!(
+            Instruction::CSRRC { rd: Register::A0, rs1: Register::RA, csr: 20 },
+            changes: {registers: {a0: 3, ra: 12}},
+            to: {registers: {a0: 0, ra: 12}},
+        );
+        test_execute!(
+            Instruction::CSRRC { rd: Register::T1, rs1: Register::T0, csr: 5 },
+            changes: {registers: {t1: 3, t0: 0b10010010}, csr: {5: 0b10000101}},
+            to: {registers: {t1: 0b10000101, t0: 0b10010010}, csr: {5: 0b00000101}},
         );
     }
 }
