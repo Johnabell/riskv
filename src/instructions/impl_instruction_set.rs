@@ -93,6 +93,12 @@ impl InstructionSet for Instruction {
             Instruction::AND { rd, rs1, rs2 } => {
                 processor.registers[rd] = processor.registers[rs1] & processor.registers[rs2]
             }
+            Instruction::CSRRW { rd, rs1, csr } => {
+                processor.registers[rd] = processor.csrs.read_write(csr, processor.registers[rs1])
+            }
+            Instruction::CSRRS { rd, rs1, csr } => {
+                processor.registers[rd] = processor.csrs.set_bits(csr, processor.registers[rs1])
+            },
             Instruction::LB { rd, rs1, offset } => {
                 processor.registers[rd] = processor.memory.load_byte(
                     processor.registers[rs1]
@@ -146,9 +152,6 @@ impl InstructionSet for Instruction {
                     .as_unsigned() as usize,
                 processor.registers[rs2],
             ),
-            Instruction::CSRRW { rd, rs1, csr } => {
-                processor.registers[rd] = processor.csrs.read_write(csr, processor.registers[rs1])
-            }
         }
         Ok(())
     }
@@ -984,6 +987,20 @@ mod test {
             Instruction::CSRRW { rd: Register::T1, rs1: Register::T0, csr: 5 },
             changes: {registers: {t1: 3, t0: 12}, csr: {5: 42}},
             to: {registers: {t1: 42, t0: 12}, csr: {5: 12}},
+        );
+    }
+
+    #[test]
+    fn execute_csrrs() {
+        test_execute!(
+            Instruction::CSRRS { rd: Register::A0, rs1: Register::RA, csr: 20 },
+            changes: {registers: {a0: 3, ra: 12}},
+            to: {registers: {a0: 0, ra: 12}, csr: {20: 12}},
+        );
+        test_execute!(
+            Instruction::CSRRS { rd: Register::T1, rs1: Register::T0, csr: 5 },
+            changes: {registers: {t1: 3, t0: 0b10010010}, csr: {5: 0b10000101}},
+            to: {registers: {t1: 0b10000101, t0: 0b10010010}, csr: {5: 0b10010111}},
         );
     }
 }
