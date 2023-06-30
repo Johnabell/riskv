@@ -7,6 +7,68 @@ A RISC-V interpreter written in Rust.
 This project is in early stages and it primarily being embarked upon as a learning exercise.
 Feel free to contribute and get involved if you would like to learn more about assembly and RISC-V.
 
+## TODO
+
+<details open>
+  <summary>
+    - [ ] Implement RV32I:
+  </summary>
+
+  - [x] LUI
+  - [x] AUIPC
+  - [x] ADDI
+  - [x] SLTI
+  - [x] SLTUI
+  - [x] XORI
+  - [x] ORI
+  - [x] ANDI
+  - [x] SLLI
+  - [x] SRLI
+  - [x] SRAI
+  - [x] ADD
+  - [x] SUB
+  - [x] SLL
+  - [x] SLT
+  - [x] SLTU
+  - [x] XOR
+  - [x] SRL
+  - [x] SRA
+  - [x] OR
+  - [x] AND
+  - [ ] FENCE
+  - [ ] FENCE.I
+  - [x] CSRRW
+  - [x] CSRRS
+  - [ ] CSRRC
+  - [ ] CSRRWI
+  - [ ] CSRRSI
+  - [ ] CSRRCI
+  - [ ] ECALL
+  - [ ] EBREAK
+  - [ ] URET
+  - [ ] SRET
+  - [ ] MRET
+  - [ ] WFI
+  - [ ] SFENCE.VMA
+  - [X] LB
+  - [X] LH
+  - [X] LW
+  - [X] LBU
+  - [X] LHU
+  - [X] SB
+  - [X] SH
+  - [X] SW
+  - [ ] JAL
+  - [ ] JALR
+  - [ ] BEQ
+  - [ ] BNE
+  - [ ] BLT
+  - [ ] BGE
+  - [ ] BLTU
+  - [ ] BGEU
+
+</details>
+
 ## Provisional plan
 
 - Implement basic model of the processor, instructions, stack and heap (based on a useful subset of all the instructions)
