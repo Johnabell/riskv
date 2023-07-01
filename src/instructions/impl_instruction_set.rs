@@ -982,9 +982,9 @@ mod test {
     #[test]
     fn execute_csrrw() {
         test_execute!(
-            Instruction::CSRRW { rd: Register::A0, rs1: Register::RA, csr: 20 },
-            changes: {registers: {a0: 3, ra: 12}},
-            to: {registers: {a0: 0, ra: 12}, csr: {20: 12}},
+            Instruction::CSRRW { rd: Register::A0, rs1: Register::S10, csr: 20 },
+            changes: {registers: {a0: 3, s10: 12}},
+            to: {registers: {a0: 0, s10: 12}, csr: {20: 12}},
         );
         test_execute!(
             Instruction::CSRRW { rd: Register::T1, rs1: Register::T0, csr: 5 },
@@ -996,28 +996,28 @@ mod test {
     #[test]
     fn execute_csrrs() {
         test_execute!(
-            Instruction::CSRRS { rd: Register::A0, rs1: Register::RA, csr: 20 },
-            changes: {registers: {a0: 3, ra: 12}},
-            to: {registers: {a0: 0, ra: 12}, csr: {20: 12}},
+            Instruction::CSRRS { rd: Register::T2, rs1: Register::S4, csr: 20 },
+            changes: {registers: {t2: 3, s4: 12}},
+            to: {registers: {t2: 0, s4: 12}, csr: {20: 12}},
         );
         test_execute!(
-            Instruction::CSRRS { rd: Register::T1, rs1: Register::T0, csr: 5 },
-            changes: {registers: {t1: 3, t0: 0b10010010}, csr: {5: 0b10000101}},
-            to: {registers: {t1: 0b10000101, t0: 0b10010010}, csr: {5: 0b10010111}},
+            Instruction::CSRRS { rd: Register::A6, rs1: Register::S7, csr: 5 },
+            changes: {registers: {a6: 3, s7: 0b10010010}, csr: {5: 0b10000101}},
+            to: {registers: {a6: 0b10000101, s7: 0b10010010}, csr: {5: 0b10010111}},
         );
     }
 
     #[test]
     fn execute_csrrc() {
         test_execute!(
-            Instruction::CSRRC { rd: Register::A0, rs1: Register::RA, csr: 20 },
-            changes: {registers: {a0: 3, ra: 12}},
-            to: {registers: {a0: 0, ra: 12}},
+            Instruction::CSRRC { rd: Register::RA, rs1: Register::GP, csr: 20 },
+            changes: {registers: {ra: 3, gp: 12}},
+            to: {registers: {ra: 0, gp: 12}},
         );
         test_execute!(
-            Instruction::CSRRC { rd: Register::T1, rs1: Register::T0, csr: 5 },
-            changes: {registers: {t1: 3, t0: 0b10010010}, csr: {5: 0b10000101}},
-            to: {registers: {t1: 0b10000101, t0: 0b10010010}, csr: {5: 0b00000101}},
+            Instruction::CSRRC { rd: Register::TP, rs1: Register::A7, csr: 5 },
+            changes: {registers: {tp: 3, a7: 0b10010010}, csr: {5: 0b10000101}},
+            to: {registers: {tp: 0b10000101, a7: 0b10010010}, csr: {5: 0b00000101}},
         );
     }
 }
