@@ -6,6 +6,10 @@ const CSR_SIZE: usize = 4096;
 /// The control status registers.
 pub trait CSR {
     type Register;
+    /// Reads the value of the CSR.
+    ///
+    /// Panics if index is out of bounds (>`CSR_SIZE`)
+    fn read(&self, index: u16) -> Self::Register;
     /// Swaps the value for the value at `index`.
     ///
     /// Panics if index is out of bounds (>`CSR_SIZE`)
@@ -84,6 +88,10 @@ macro_rules! implement_csr {
         }
         impl CSR for $struct_name {
             type Register = $register_type;
+
+            fn read(&self, index: u16) -> Self::Register {
+                self.registers[index as usize].load(SeqCst)
+            }
 
             fn read_write(&self, index: u16, value: Self::Register) -> Self::Register {
                 self.registers[index as usize].swap(value, SeqCst)

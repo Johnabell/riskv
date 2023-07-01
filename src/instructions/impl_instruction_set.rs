@@ -2,6 +2,7 @@ use crate::csr::{CSR, CSR32};
 use crate::instruction_set::{Exception, InstructionSet};
 use crate::integer::{AsSigned, AsUnsigned};
 use crate::processor::Processor;
+use crate::registers::Register;
 
 use super::Instruction;
 
@@ -93,9 +94,13 @@ impl InstructionSet for Instruction {
             Instruction::AND { rd, rs1, rs2 } => {
                 processor.registers[rd] = processor.registers[rs1] & processor.registers[rs2]
             }
-            Instruction::CSRRW { rd, rs1, csr } => {
-                processor.registers[rd] = processor.csrs.read_write(csr, processor.registers[rs1])
-            }
+            Instruction::CSRRW { rd, rs1, csr } => match rs1 {
+                Register::ZERO => processor.registers[rd] = processor.csrs.read(csr),
+                _ => {
+                    processor.registers[rd] =
+                        processor.csrs.read_write(csr, processor.registers[rs1])
+                }
+            },
             Instruction::CSRRS { rd, rs1, csr } => {
                 processor.registers[rd] = processor.csrs.set_bits(csr, processor.registers[rs1])
             }
@@ -994,11 +999,30 @@ mod test {
     }
 
     #[test]
+    fn execute_csrr() {
+        test_execute_many!(
+            Instruction::CSRR(Register::S3, 42),
+            changes: {registers: {s3: 0}},
+            to: {registers: {s3: 0}},
+        );
+        test_execute_many!(
+            Instruction::CSRR(Register::S6, 42),
+            changes: {registers: {s6: 3}, csr: {42: 42}},
+            to: {registers: {s6: 42}, csr: {42: 42}},
+        );
+    }
+
+    #[test]
     fn execute_csrrs() {
         test_execute!(
             Instruction::CSRRS { rd: Register::T2, rs1: Register::S4, csr: 20 },
             changes: {registers: {t2: 3, s4: 12}},
             to: {registers: {t2: 0, s4: 12}, csr: {20: 12}},
+        );
+        test_execute!(
+            Instruction::CSRRS { rd: Register::S8, rs1: Register::ZERO, csr: 20 },
+            changes: {registers: {s8: 3}, csr: {20: 12}},
+            to: {registers: {s8: 12}, csr: {20: 12}},
         );
         test_execute!(
             Instruction::CSRRS { rd: Register::A6, rs1: Register::S7, csr: 5 },
@@ -1013,6 +1037,11 @@ mod test {
             Instruction::CSRRC { rd: Register::RA, rs1: Register::GP, csr: 20 },
             changes: {registers: {ra: 3, gp: 12}},
             to: {registers: {ra: 0, gp: 12}},
+        );
+        test_execute!(
+            Instruction::CSRRS { rd: Register::S9, rs1: Register::ZERO, csr: 20 },
+            changes: {registers: {s9: 30}, csr: {20: 12}},
+            to: {registers: {s9: 12}, csr: {20: 12}},
         );
         test_execute!(
             Instruction::CSRRC { rd: Register::TP, rs1: Register::A7, csr: 5 },

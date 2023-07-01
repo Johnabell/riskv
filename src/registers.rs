@@ -356,4 +356,17 @@ mod test {
         assert_eq!(Register::from(31), Register::T6);
         assert_eq!(Register::from(32), Register::ZERO);
     }
+
+    #[test]
+    fn register_zero_deref() {
+        let register_zero = ZeroRegister::<i32>::default();
+        assert_eq!(*register_zero, 0);
+    }
+
+    #[test]
+    fn register_zero_deref_mut() {
+        let mut register_zero = ZeroRegister::<i32>::default();
+        *register_zero = 23;
+        assert_eq!(*register_zero, 0);
+    }
 }
