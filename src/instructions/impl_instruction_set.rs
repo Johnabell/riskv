@@ -1013,6 +1013,20 @@ mod test {
     }
 
     #[test]
+    fn execute_csrw() {
+        test_execute_many!(
+            Instruction::CSRW(Register::S3, 42),
+            changes: {registers: {s3: 0}},
+            to: {registers: {s3: 0}},
+        );
+        test_execute_many!(
+            Instruction::CSRW(Register::S6, 42),
+            changes: {registers: {s6: 3}, csr: {42: 42}},
+            to: {registers: {s6: 3}, csr: {42: 3}},
+        );
+    }
+
+    #[test]
     fn execute_csrrs() {
         test_execute!(
             Instruction::CSRRS { rd: Register::T2, rs1: Register::S4, csr: 20 },

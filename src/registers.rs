@@ -1,3 +1,8 @@
+use std::{
+    fmt::Debug,
+    ops::{Deref, DerefMut},
+};
+
 /// Struct representing the RISK-V Processor.
 ///
 /// The processor contains the following registers.
@@ -38,10 +43,7 @@
 /// | 31 | -   | x31      | t6       | temporary register 6                 | caller   |
 #[derive(Debug, Default, PartialEq, Eq)]
 pub(super) struct Registers<T> {
-    pub(super) zero: T,
-    // Since zero is hard wired, we don't want to give out a mutable reference,
-    // this is a compromise until I think of a better way to do this.
-    pub(super) _zero: T,
+    pub(super) zero: ZeroRegister<T>,
     pub(super) ra: T,
     pub(super) sp: T,
     pub(super) gp: T,
@@ -73,6 +75,42 @@ pub(super) struct Registers<T> {
     pub(super) t4: T,
     pub(super) t5: T,
     pub(super) t6: T,
+}
+
+#[derive(Default)]
+pub(super) struct ZeroRegister<T> {
+    zero: T,
+    // Since zero is hard wired, we don't want to give out a mutable reference,
+    // this is a compromise until I think of a better way to do this.
+    _zero: T,
+}
+
+impl<T> Debug for ZeroRegister<T> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str("0")
+    }
+}
+
+impl<T> PartialEq for ZeroRegister<T> {
+    fn eq(&self, _other: &Self) -> bool {
+        true
+    }
+}
+
+impl<T> Eq for ZeroRegister<T> {}
+
+impl<T> Deref for ZeroRegister<T> {
+    type Target = T;
+
+    fn deref(&self) -> &Self::Target {
+        &self.zero
+    }
+}
+
+impl<T> DerefMut for ZeroRegister<T> {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self._zero
+    }
 }
 
 #[repr(u8)]
@@ -271,7 +309,7 @@ impl<T> std::ops::Index<Register> for Registers<T> {
 impl<T> std::ops::IndexMut<u8> for Registers<T> {
     fn index_mut(&mut self, index: u8) -> &mut Self::Output {
         match index {
-            0 => &mut self._zero,
+            0 => &mut self.zero,
             1 => &mut self.ra,
             2 => &mut self.sp,
             3 => &mut self.gp,
@@ -311,7 +349,7 @@ impl<T> std::ops::IndexMut<u8> for Registers<T> {
 impl<T> std::ops::IndexMut<Register> for Registers<T> {
     fn index_mut(&mut self, index: Register) -> &mut Self::Output {
         match index {
-            Register::ZERO => &mut self._zero,
+            Register::ZERO => &mut self.zero,
             Register::RA => &mut self.ra,
             Register::SP => &mut self.sp,
             Register::GP => &mut self.gp,
