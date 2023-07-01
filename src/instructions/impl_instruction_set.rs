@@ -94,13 +94,14 @@ impl InstructionSet for Instruction {
             Instruction::AND { rd, rs1, rs2 } => {
                 processor.registers[rd] = processor.registers[rs1] & processor.registers[rs2]
             }
-            Instruction::CSRRW { rd, rs1, csr } => match rs1 {
-                Register::ZERO => processor.registers[rd] = processor.csrs.read(csr),
-                _ => {
-                    processor.registers[rd] =
-                        processor.csrs.read_write(csr, processor.registers[rs1])
-                }
-            },
+            Instruction::CSRRW {
+                rd,
+                rs1: Register::ZERO,
+                csr,
+            } => processor.registers[rd] = processor.csrs.read(csr),
+            Instruction::CSRRW { rd, rs1, csr } => {
+                processor.registers[rd] = processor.csrs.read_write(csr, processor.registers[rs1])
+            }
             Instruction::CSRRS { rd, rs1, csr } => {
                 processor.registers[rd] = processor.csrs.set_bits(csr, processor.registers[rs1])
             }
