@@ -4,33 +4,33 @@ pub(crate) mod i12 {
 }
 
 pub(crate) trait AsUnsigned<N> {
-    fn as_unsigned(self) -> N;
+    fn as_unsigned(&self) -> N;
 }
 
 pub(crate) trait AsSigned<N> {
-    fn as_signed(self) -> N;
+    fn as_signed(&self) -> N;
 }
 
 macro_rules! impl_signed_unsigned {
     ($signed:ty, $unsigned:ty) => {
         impl AsUnsigned<$unsigned> for $signed {
-            fn as_unsigned(self) -> $unsigned {
-                self as $unsigned
+            fn as_unsigned(&self) -> $unsigned {
+                *self as $unsigned
             }
         }
         impl AsUnsigned<$unsigned> for $unsigned {
-            fn as_unsigned(self) -> $unsigned {
-                self as $unsigned
+            fn as_unsigned(&self) -> $unsigned {
+                *self as $unsigned
             }
         }
         impl AsSigned<$signed> for $signed {
-            fn as_signed(self) -> $signed {
-                self as $signed
+            fn as_signed(&self) -> $signed {
+                *self as $signed
             }
         }
         impl AsSigned<$signed> for $unsigned {
-            fn as_signed(self) -> $signed {
-                self as $signed
+            fn as_signed(&self) -> $signed {
+                *self as $signed
             }
         }
     };

@@ -22,9 +22,7 @@ impl InstructionSet for Instruction {
     ) -> Result<(), Exception> {
         match self {
             Instruction::LUI { rd, imm } => processor.registers[rd] = imm << 12,
-            Instruction::AUIPC { rd, imm } => {
-                processor.registers[rd] = processor.pc + Self::RegisterType::from(imm << 12)
-            }
+            Instruction::AUIPC { rd, imm } => processor.registers[rd] = processor.pc + (imm << 12),
             Instruction::ADDI { rd, rs1, imm } => {
                 processor.registers[rd] = processor.registers[rs1].wrapping_add(imm.into())
             }
