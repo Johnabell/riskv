@@ -254,10 +254,7 @@ mod test {
 
             // Assert
             let expected_state = processor_state!($final_state);
-            assert_eq!(processor.registers, expected_state.registers);
-            assert_eq!(processor.memory, expected_state.memory);
-            assert_eq!(processor.pc, expected_state.pc);
-            assert_eq!(processor.csrs, expected_state.csrs);
+            assert_eq!(processor, expected_state);
             processor
         }};
     }
@@ -273,10 +270,7 @@ mod test {
 
             // Assert
             let expected_state = processor_state!($final_state);
-            assert_eq!(processor.registers, expected_state.registers);
-            assert_eq!(processor.memory, expected_state.memory);
-            assert_eq!(processor.pc, expected_state.pc);
-            assert_eq!(processor.csrs, expected_state.csrs);
+            assert_eq!(processor, expected_state);
             processor
         }};
     }

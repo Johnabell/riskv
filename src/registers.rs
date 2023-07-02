@@ -407,4 +407,40 @@ mod test {
         *register_zero = 23;
         assert_eq!(*register_zero, 0);
     }
+
+    #[test]
+    fn registers_zero_register() {
+        let registers = Registers::<i64>::default();
+        assert_eq!(registers[Register::ZERO], 0);
+    }
+
+    #[test]
+    fn registers_zero_register_mut() {
+        let mut registers = Registers::default();
+        registers[Register::ZERO] = 42;
+        assert_eq!(registers[Register::ZERO], 0);
+    }
+
+    #[test]
+    fn index_u8() {
+        let mut registers = Registers::default();
+        for i in 0..32 {
+            registers[i] = i;
+            assert_eq!(i, registers[i]);
+        }
+    }
+
+    #[test]
+    #[should_panic]
+    fn index_out_of_bounds_mut() {
+        let mut registers = Registers::default();
+        registers[32] = 32;
+    }
+
+    #[test]
+    #[should_panic]
+    fn index_out_of_bounds() {
+        let registers = Registers::<i128>::default();
+        let _ = registers[32] == 0;
+    }
 }
