@@ -45,11 +45,6 @@ Feel free to contribute and get involved if you would like to learn more about a
   - [ ] CSRRCI
   - [ ] ECALL
   - [ ] EBREAK
-  - [ ] URET
-  - [ ] SRET
-  - [ ] MRET
-  - [ ] WFI
-  - [ ] SFENCE.VMA
   - [X] LB
   - [X] LH
   - [X] LW
@@ -66,6 +61,19 @@ Feel free to contribute and get involved if you would like to learn more about a
   - [ ] BGE
   - [ ] BLTU
   - [ ] BGEU
+
+</details>
+
+<details open>
+  <summary>
+    - [ ] Implement privileged RV32I:
+  </summary>
+
+  - [ ] URET
+  - [ ] SRET
+  - [ ] MRET
+  - [ ] WFI
+  - [ ] SFENCE.VMA
 
 </details>
 

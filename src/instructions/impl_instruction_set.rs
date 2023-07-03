@@ -1056,4 +1056,32 @@ mod test {
             to: {registers: {tp: 0b10000101, a7: 0b10010010}, csr: {5: 0b00000101}},
         );
     }
+
+    #[test]
+    fn execute_csrs() {
+        test_execute_many!(
+            Instruction::CSRS(Register::S3, 42),
+            changes: {registers: {s3: 0}},
+            to: {registers: {s3: 0}},
+        );
+        test_execute_many!(
+            Instruction::CSRS(Register::S7, 5),
+            changes: {registers: {s7: 0b10010010}, csr: {5: 0b10000101}},
+            to: {registers: {s7: 0b10010010}, csr: {5: 0b10010111}},
+        );
+    }
+
+    #[test]
+    fn execute_csrc() {
+        test_execute_many!(
+            Instruction::CSRC(Register::S3, 42),
+            changes: {registers: {s3: 0}},
+            to: {registers: {s3: 0}},
+        );
+        test_execute_many!(
+            Instruction::CSRC(Register::SP, 5),
+            changes: {registers: {sp: 0b10010010}, csr: {5: 0b10000101}},
+            to: {registers: {sp: 0b10010010}, csr: {5: 0b00000101}},
+        );
+    }
 }

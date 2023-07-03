@@ -243,6 +243,38 @@ impl Instruction {
             csr,
         })
     }
+
+    /// # CSRS
+    ///
+    /// Sets the bits in CSR, no read side affects should be caused by this instruction.
+    ///
+    /// Note: This pseudoinstruction desugars to `CSRRS x0, csr, rs`
+    /// See
+    /// [ref](https://github.com/riscv-non-isa/riscv-asm-manual/blob/master/riscv-asm.md#pseudoinstructions-for-accessing-control-and-status-registers)
+    #[allow(non_snake_case)]
+    pub(crate) fn CSRS(rs1: Register, csr: u16) -> PseudoinstructionMappingIter {
+        PseudoinstructionMappingIter::One(Instruction::CSRRS {
+            rd: Register::ZERO,
+            rs1,
+            csr,
+        })
+    }
+
+    /// # CSRC
+    ///
+    /// Read CSR
+    ///
+    /// Note: This pseudoinstruction desugars to `CSRRC x0, csr, rs`
+    /// See
+    /// [ref](https://github.com/riscv-non-isa/riscv-asm-manual/blob/master/riscv-asm.md#pseudoinstructions-for-accessing-control-and-status-registers)
+    #[allow(non_snake_case)]
+    pub(crate) fn CSRC(rs1: Register, csr: u16) -> PseudoinstructionMappingIter {
+        PseudoinstructionMappingIter::One(Instruction::CSRRC {
+            rd: Register::ZERO,
+            rs1,
+            csr,
+        })
+    }
 }
 
 fn sign_extend_i12(value: i32) -> i16 {
