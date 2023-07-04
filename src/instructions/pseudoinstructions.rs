@@ -212,7 +212,7 @@ impl Instruction {
             imm: 0,
         });
 
-    /// # CSRR
+    /// # Read CSR
     ///
     /// Read CSR
     ///
@@ -228,7 +228,7 @@ impl Instruction {
         })
     }
 
-    /// # CSRW
+    /// # Write CSR
     ///
     /// Write CSR, no read side affects should be caused by this instruction.
     ///
@@ -244,9 +244,10 @@ impl Instruction {
         })
     }
 
-    /// # CSRS
+    /// # Set bits in CSR
     ///
-    /// Sets the bits in CSR, no read side affects should be caused by this instruction.
+    /// Sets the bits in CSR, no read side affects should be caused by this
+    /// instruction.
     ///
     /// Note: This pseudoinstruction desugars to `CSRRS x0, csr, rs`
     /// See
@@ -260,9 +261,10 @@ impl Instruction {
         })
     }
 
-    /// # CSRC
+    /// # Clear bits in CSR
     ///
-    /// Read CSR
+    /// Clear bits in CSR, no read side affects should be caused by this
+    /// instruction.
     ///
     /// Note: This pseudoinstruction desugars to `CSRRC x0, csr, rs`
     /// See

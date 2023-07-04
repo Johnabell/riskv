@@ -387,7 +387,7 @@ pub(super) enum Instruction {
         csr: u16,
     },
 
-    /// # Atomic CSR read write
+    /// # Atomic CSR read set
     ///
     /// Reads the value of the CSR, zero-extends the value to XLEN bits, and
     /// writes it to integer register rd. The initial value in integer register
@@ -403,7 +403,7 @@ pub(super) enum Instruction {
         csr: u16,
     },
 
-    /// # Atomic CSR read write
+    /// # Atomic CSR read clear
     ///
     /// Reads the value of the CSR, zero-extends the value to XLEN bits, and
     /// writes it to integer register rd. The initial value in integer register
