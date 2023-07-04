@@ -1150,4 +1150,18 @@ mod test {
             to: {registers: {tp: 0b10000101}, csr: {5: 0b10000000}},
         );
     }
+
+    #[test]
+    fn execute_csrwi() {
+        test_execute_many!(
+            Instruction::CSRWI(42, 0),
+            changes: {registers: {}},
+            to: {registers: {}},
+        );
+        test_execute_many!(
+            Instruction::CSRWI(42, 5),
+            changes: {registers: {}, csr: {42: 42}},
+            to: {registers: {}, csr: {42: 5}},
+        );
+    }
 }
