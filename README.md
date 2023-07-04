@@ -40,9 +40,9 @@ Feel free to contribute and get involved if you would like to learn more about a
   - [x] CSRRW
   - [x] CSRRS
   - [x] CSRRC
-  - [ ] CSRRWI
-  - [ ] CSRRSI
-  - [ ] CSRRCI
+  - [X] CSRRWI
+  - [X] CSRRSI
+  - [X] CSRRCI
   - [ ] ECALL
   - [ ] EBREAK
   - [X] LB
