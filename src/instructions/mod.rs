@@ -15,7 +15,7 @@ mod shamt;
 mod simmi;
 
 use self::{
-    csr::CSR, csr_imm::CsrImm, funct3::Funct3, funct6::Funct6, funct7::Funct7, immi::ImmI,
+    csr::Csr, csr_imm::CsrImm, funct3::Funct3, funct6::Funct6, funct7::Funct7, immi::ImmI,
     immu::ImmU, rd::Rd, rs1::Rs1, rs2::Rs2, shamt::Shamt, simmi::SImmI,
 };
 
@@ -624,17 +624,17 @@ impl From<u32> for Instruction {
                 0b_001 => Instruction::CSRRW {
                     rd: *Rd::from(value),
                     rs1: *Rs1::from(value),
-                    csr: *CSR::from(value),
+                    csr: *Csr::from(value),
                 },
                 0b_010 => Instruction::CSRRS {
                     rd: *Rd::from(value),
                     rs1: *Rs1::from(value),
-                    csr: *CSR::from(value),
+                    csr: *Csr::from(value),
                 },
                 0b_011 => Instruction::CSRRC {
                     rd: *Rd::from(value),
                     rs1: *Rs1::from(value),
-                    csr: *CSR::from(value),
+                    csr: *Csr::from(value),
                 },
                 0b_101 => Instruction::CSRRWI {
                     rd: *Rd::from(value),
