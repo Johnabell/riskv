@@ -1,5 +1,6 @@
 #![allow(clippy::unusual_byte_groupings, clippy::upper_case_acronyms)]
 mod csr;
+mod csr_imm;
 mod funct3;
 mod funct6;
 mod funct7;
@@ -14,8 +15,8 @@ mod shamt;
 mod simmi;
 
 use self::{
-    csr::CSR, funct3::Funct3, funct6::Funct6, funct7::Funct7, immi::ImmI, immu::ImmU, rd::Rd,
-    rs1::Rs1, rs2::Rs2, shamt::Shamt, simmi::SImmI,
+    csr::CSR, csr_imm::CsrImm, funct3::Funct3, funct6::Funct6, funct7::Funct7, immi::ImmI,
+    immu::ImmU, rd::Rd, rs1::Rs1, rs2::Rs2, shamt::Shamt, simmi::SImmI,
 };
 
 use crate::registers::Register;
@@ -417,6 +418,14 @@ pub(super) enum Instruction {
         rs1: Register,
         csr: u16,
     },
+
+    /// # Atomic CSR read write immediate
+    ///
+    /// Update the CSR using an XLEN-bit value obtained by zero-extending a
+    /// 5-bit unsigned immediate (uimm[4:0]) field encoded in the rs1 field.
+    ///
+    /// `rd = CSRs[csr]; CSRs[csr] = zext(imm)`
+    CSRRWI { rd: Register, csr: u16, imm: u8 },
 }
 
 impl From<u32> for Instruction {
@@ -610,6 +619,11 @@ impl From<u32> for Instruction {
                     rd: *Rd::from(value),
                     rs1: *Rs1::from(value),
                     csr: *CSR::from(value),
+                },
+                0b_101 => Instruction::CSRRWI {
+                    rd: *Rd::from(value),
+                    imm: *CsrImm::from(value),
+                    csr: *Csr::from(value),
                 },
                 _ => unimplemented!(
                     "The given instruction is not yet implemented {:#034b}",
@@ -1014,6 +1028,18 @@ mod test {
                 rd: Register::S7,
                 rs1: Register::S1,
                 csr: 3391,
+            }
+        );
+    }
+
+    #[test]
+    fn csrrwi_from_i32() {
+        assert_eq!(
+            Instruction::from(u32::from_le(0b_0000001_11011_01001_101_10101_1110011)),
+            Instruction::CSRRWI {
+                rd: Register::S5,
+                imm: 9,
+                csr: 59,
             }
         );
     }
