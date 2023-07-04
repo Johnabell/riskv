@@ -1164,4 +1164,18 @@ mod test {
             to: {registers: {}, csr: {42: 5}},
         );
     }
+
+    #[test]
+    fn execute_csrsi() {
+        test_execute_many!(
+            Instruction::CSRSI(42, 0),
+            changes: {registers: {}},
+            to: {registers: {}},
+        );
+        test_execute_many!(
+            Instruction::CSRSI(5, 0b10101),
+            changes: {registers: {}, csr: {5: 0b10000101}},
+            to: {registers: {}, csr: {5: 0b10010101}},
+        );
+    }
 }
