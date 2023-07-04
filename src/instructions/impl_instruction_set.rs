@@ -111,6 +111,10 @@ impl InstructionSet for Instruction {
                     .csrs
                     .read_write(csr, Self::RegisterType::from(imm))
             }
+            Instruction::CSRRSI { rd, csr, imm } => {
+                processor.registers[rd] =
+                    processor.csrs.set_bits(csr, Self::RegisterType::from(imm))
+            }
             Instruction::LB { rd, rs1, offset } => {
                 processor.registers[rd] = processor.memory.load_byte(
                     processor.registers[rs1]
@@ -1101,6 +1105,25 @@ mod test {
             Instruction::CSRRWI { rd: Register::T1, imm: 32, csr: 5 },
             changes: {registers: {t1: 3}, csr: {5: 42}},
             to: {registers: {t1: 42}, csr: {5: 32}},
+        );
+    }
+
+    #[test]
+    fn execute_csrrsi() {
+        test_execute!(
+            Instruction::CSRRSI { rd: Register::T2, imm: 12, csr: 20 },
+            changes: {registers: {t2: 3}},
+            to: {registers: {t2: 0}, csr: {20: 12}},
+        );
+        test_execute!(
+            Instruction::CSRRSI { rd: Register::S8, imm: 0, csr: 20 },
+            changes: {registers: {s8: 3}, csr: {20: 12}},
+            to: {registers: {s8: 12}, csr: {20: 12}},
+        );
+        test_execute!(
+            Instruction::CSRRSI { rd: Register::A6, imm: 0b01010, csr: 5 },
+            changes: {registers: {a6: 3}, csr: {5: 0b10000101}},
+            to: {registers: {a6: 0b10000101}, csr: {5: 0b10001111}},
         );
     }
 }

@@ -426,6 +426,14 @@ pub(super) enum Instruction {
     ///
     /// `rd = CSRs[csr]; CSRs[csr] = zext(imm)`
     CSRRWI { rd: Register, csr: u16, imm: u8 },
+
+    /// # Atomic CSR read set immediate
+    ///
+    /// Set CSR bit using an XLEN-bit value obtained by zero-extending a 5-bit
+    /// unsigned immediate (uimm[4:0]) field encoded in the rs1 field.
+    ///
+    /// `t = CSRs[csr]; CSRs[csr] = t | zext(imm); rd = t`
+    CSRRSI { rd: Register, csr: u16, imm: u8 },
 }
 
 impl From<u32> for Instruction {
@@ -621,6 +629,11 @@ impl From<u32> for Instruction {
                     csr: *CSR::from(value),
                 },
                 0b_101 => Instruction::CSRRWI {
+                    rd: *Rd::from(value),
+                    imm: *CsrImm::from(value),
+                    csr: *Csr::from(value),
+                },
+                0b_110 => Instruction::CSRRSI {
                     rd: *Rd::from(value),
                     imm: *CsrImm::from(value),
                     csr: *Csr::from(value),
@@ -1040,6 +1053,18 @@ mod test {
                 rd: Register::S5,
                 imm: 9,
                 csr: 59,
+            }
+        );
+    }
+
+    #[test]
+    fn csrrsi_from_i32() {
+        assert_eq!(
+            Instruction::from(u32::from_le(0b_0000001_01010_11011_110_10100_1110011)),
+            Instruction::CSRRSI {
+                rd: Register::S4,
+                imm: 27,
+                csr: 42,
             }
         );
     }
