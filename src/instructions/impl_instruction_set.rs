@@ -1178,4 +1178,18 @@ mod test {
             to: {registers: {}, csr: {5: 0b10010101}},
         );
     }
+
+    #[test]
+    fn execute_csrci() {
+        test_execute_many!(
+            Instruction::CSRCI(42, 0),
+            changes: {registers: {}},
+            to: {registers: {}},
+        );
+        test_execute_many!(
+            Instruction::CSRCI(5, 0b10011),
+            changes: {registers: {}, csr: {5: 0b10000101}},
+            to: {registers: {}, csr: {5: 0b10000100}},
+        );
+    }
 }

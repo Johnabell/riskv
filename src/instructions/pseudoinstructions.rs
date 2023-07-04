@@ -309,6 +309,23 @@ impl Instruction {
             csr,
         })
     }
+
+    /// # Clear bits in CSR, immediate
+    ///
+    /// Clears bits in CSR using the immediate value. This instruction should
+    /// not cause any read side affects.
+    ///
+    /// Note: This pseudoinstruction desugars to `CSRRCI x0, csr, imm`
+    /// See
+    /// [ref](https://github.com/riscv-non-isa/riscv-asm-manual/blob/master/riscv-asm.md#pseudoinstructions-for-accessing-control-and-status-registers)
+    #[allow(non_snake_case)]
+    pub(crate) fn CSRCI(csr: u16, imm: u8) -> PseudoinstructionMappingIter {
+        PseudoinstructionMappingIter::One(Instruction::CSRRCI {
+            rd: Register::ZERO,
+            imm,
+            csr,
+        })
+    }
 }
 
 fn sign_extend_i12(value: i32) -> i16 {
