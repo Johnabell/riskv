@@ -92,7 +92,7 @@ macro_rules! implement_csr {
         impl core::fmt::Debug for $struct_name {
             fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
                 f.write_fmt(format_args!(
-                    "{} {{ registers: {{{}}} }}",
+                    "{} {{ registers: {{ {} }} }}",
                     stringify!($struct_name),
                     &self
                         .registers
@@ -153,7 +153,7 @@ mod test {
         csr_32.read_write(85, 58);
         assert_eq!(
             format!("{:?}", csr_32),
-            "CSR32 { registers: {34: 43, 85: 58} }"
+            "CSR32 { registers: { 34: 43, 85: 58 } }"
         );
     }
 
@@ -164,7 +164,7 @@ mod test {
         csr_64.read_write(85, 58);
         assert_eq!(
             format!("{:?}", csr_64),
-            "CSR64 { registers: {14: 41, 85: 58} }"
+            "CSR64 { registers: { 14: 41, 85: 58 } }"
         );
     }
 
