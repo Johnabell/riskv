@@ -24,6 +24,7 @@ impl Deref for Funct7 {
 #[cfg(test)]
 mod test {
     use super::*;
+    use pretty_assertions::assert_eq;
 
     #[test]
     fn from_u32() {

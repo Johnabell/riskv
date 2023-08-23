@@ -24,6 +24,7 @@ impl Deref for ImmI {
 #[cfg(test)]
 mod test {
     use crate::integer::i12;
+    use pretty_assertions::assert_eq;
 
     use super::*;
 

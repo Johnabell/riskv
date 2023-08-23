@@ -414,6 +414,7 @@ where
 #[cfg(test)]
 mod test {
     use super::*;
+    use pretty_assertions::assert_eq;
 
     #[test]
     fn debug_formatting_registers_ignores_zeros() {

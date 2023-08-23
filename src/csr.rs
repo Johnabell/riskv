@@ -145,6 +145,7 @@ implement_csr!(CSR64, i64);
 #[cfg(test)]
 mod test {
     use super::*;
+    use pretty_assertions::assert_eq;
 
     #[test]
     fn debug_format_32() {

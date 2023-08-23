@@ -353,6 +353,7 @@ fn with_signed_i12_adjustment(value: i32) -> i32 {
 #[cfg(test)]
 mod test {
     use super::*;
+    use pretty_assertions::assert_eq;
 
     #[test]
     fn sign_extend_i12_test() {
