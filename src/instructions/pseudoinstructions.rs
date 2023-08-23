@@ -230,7 +230,7 @@ impl Instruction {
 
     /// # Write CSR
     ///
-    /// Write CSR, no read side affects should be caused by this instruction.
+    /// Write CSR, no read side effects should be caused by this instruction.
     ///
     /// Note: This pseudoinstruction desugars to `CSRRW x0, csr, rs`
     /// See
@@ -246,7 +246,7 @@ impl Instruction {
 
     /// # Set bits in CSR
     ///
-    /// Sets the bits in CSR, no read side affects should be caused by this
+    /// Sets the bits in CSR, no read side effects should be caused by this
     /// instruction.
     ///
     /// Note: This pseudoinstruction desugars to `CSRRS x0, csr, rs`
@@ -263,7 +263,7 @@ impl Instruction {
 
     /// # Clear bits in CSR
     ///
-    /// Clear bits in CSR, no read side affects should be caused by this
+    /// Clear bits in CSR, no read side effects should be caused by this
     /// instruction.
     ///
     /// Note: This pseudoinstruction desugars to `CSRRC x0, csr, rs`
@@ -281,7 +281,7 @@ impl Instruction {
     /// # Write CSR, immediate
     ///
     /// Writes into CSR, using the immediate value. This instruction should
-    /// not cause any read side affects.
+    /// not cause any read side effects.
     ///
     /// Note: This pseudoinstruction desugars to `CSRRWI x0, csr, imm`
     /// See
@@ -298,7 +298,7 @@ impl Instruction {
     /// # Set bits in CSR, immediate
     ///
     /// Sets bits in CSR using the immediate value. This instruction should
-    /// not cause any read side affects.
+    /// not cause any read side effects.
     ///
     /// Note: This pseudoinstruction desugars to `CSRRSI x0, csr, imm`
     /// See
@@ -315,7 +315,7 @@ impl Instruction {
     /// # Clear bits in CSR, immediate
     ///
     /// Clears bits in CSR using the immediate value. This instruction should
-    /// not cause any read side affects.
+    /// not cause any read side effects.
     ///
     /// Note: This pseudoinstruction desugars to `CSRRCI x0, csr, imm`
     /// See
