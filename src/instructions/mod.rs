@@ -675,6 +675,7 @@ const OPP_MASK: u32 = u32::from_le(0b_0000000_00000_00000_000_00000_1111111);
 #[cfg(test)]
 mod test {
     use crate::{instructions::Instruction, registers::Register};
+    use pretty_assertions::assert_eq;
 
     #[test]
     fn lui_from_i32() {

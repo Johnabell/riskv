@@ -185,6 +185,7 @@ mod test {
     use crate::memory::Memory;
     use crate::processor::Processor;
     use crate::registers::{Register, Registers};
+    use pretty_assertions::assert_eq;
 
     macro_rules! register_state {
         ($($register:ident: $value:expr),* $(,)?) => {
