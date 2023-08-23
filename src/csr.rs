@@ -42,7 +42,6 @@ pub trait ControlStatusRegisters {
 ///   point in the past.
 ///
 /// Additionally some registers are read only.
-#[derive(Debug)]
 pub struct CSR32 {
     registers: Box<[AtomicI32]>,
 }
@@ -65,7 +64,6 @@ pub struct CSR32 {
 ///   point in the past.
 ///
 /// Additionally some registers are read only.
-#[derive(Debug)]
 pub struct CSR64 {
     registers: Box<[AtomicI64]>,
 }
@@ -89,6 +87,22 @@ macro_rules! implement_csr {
         impl Default for $struct_name {
             fn default() -> Self {
                 Self::new()
+            }
+        }
+        impl core::fmt::Debug for $struct_name {
+            fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+                f.write_fmt(format_args!(
+                    "{} {{ registers: {{ {} }} }}",
+                    stringify!($struct_name),
+                    &self
+                        .registers
+                        .iter()
+                        .enumerate()
+                        .filter(|(_i, v)| v.load(SeqCst) != 0)
+                        .map(|(i, v)| format!("{i}: {}", v.load(SeqCst)))
+                        .collect::<Vec<_>>()
+                        .join(", ")
+                ))
             }
         }
         impl ControlStatusRegisters for $struct_name {
@@ -131,6 +145,28 @@ implement_csr!(CSR64, i64);
 #[cfg(test)]
 mod test {
     use super::*;
+
+    #[test]
+    fn debug_format_32() {
+        let csr_32 = CSR32::default();
+        csr_32.read_write(34, 43);
+        csr_32.read_write(85, 58);
+        assert_eq!(
+            format!("{:?}", csr_32),
+            "CSR32 { registers: { 34: 43, 85: 58 } }"
+        );
+    }
+
+    #[test]
+    fn debug_format_64() {
+        let csr_64 = CSR64::default();
+        csr_64.read_write(14, 41);
+        csr_64.read_write(85, 58);
+        assert_eq!(
+            format!("{:?}", csr_64),
+            "CSR64 { registers: { 14: 41, 85: 58 } }"
+        );
+    }
 
     #[test]
     fn initial_value_zero() {

@@ -41,7 +41,7 @@ use std::{
 /// | 29 | -   | x29      | t4       | temporary register 4                 | caller   |
 /// | 30 | -   | x30      | t5       | temporary register 5                 | caller   |
 /// | 31 | -   | x31      | t6       | temporary register 6                 | caller   |
-#[derive(Debug, Default, PartialEq, Eq)]
+#[derive(Default, PartialEq, Eq)]
 pub(super) struct Registers<T> {
     pub(super) zero: ZeroRegister<T>,
     pub(super) ra: T,
@@ -75,6 +75,22 @@ pub(super) struct Registers<T> {
     pub(super) t4: T,
     pub(super) t5: T,
     pub(super) t6: T,
+}
+
+impl<T> core::fmt::Debug for Registers<T>
+where
+    T: Debug,
+{
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let mut debug_struct = f.debug_struct("Registers");
+        for i in 0..32 {
+            let fmt_r = format!("{:?}", &self[i]);
+            if fmt_r != "0" {
+                debug_struct.field(&format!("{:?}", Register::from(i)).to_lowercase(), &self[i]);
+            }
+        }
+        debug_struct.finish()
+    }
 }
 
 #[derive(Default)]
@@ -398,6 +414,14 @@ where
 #[cfg(test)]
 mod test {
     use super::*;
+
+    #[test]
+    fn debug_formatting_registers_ignores_zeros() {
+        let mut regs = Registers::default();
+        regs.sp = 32;
+        regs.t0 = 33;
+        assert_eq!(format!("{:?}", regs), "Registers { sp: 32, t0: 33 }");
+    }
 
     #[test]
     fn from_u8() {
