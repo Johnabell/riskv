@@ -1,6 +1,8 @@
+use crate::csr::{ControlStatusRegisters, CSR32};
 use crate::instruction_set::{Exception, InstructionSet};
 use crate::integer::{AsSigned, AsUnsigned};
 use crate::processor::Processor;
+use crate::registers::Register;
 
 use super::Instruction;
 
@@ -8,17 +10,19 @@ impl InstructionSet for Instruction {
     const SHIFT_MASK: i32 = 0b_00000000_00000000_00000000_00011111;
 
     type RegisterType = i32;
+    type CSRType = CSR32;
 
     fn decode(raw_instruction: u32) -> Result<Self, Exception> {
         Ok(raw_instruction.into())
     }
 
-    fn execute(self, processor: &mut Processor<Self::RegisterType>) -> Result<(), Exception> {
+    fn execute(
+        self,
+        processor: &mut Processor<Self::RegisterType, Self::CSRType>,
+    ) -> Result<(), Exception> {
         match self {
             Instruction::LUI { rd, imm } => processor.registers[rd] = imm << 12,
-            Instruction::AUIPC { rd, imm } => {
-                processor.registers[rd] = processor.pc + Self::RegisterType::from(imm << 12)
-            }
+            Instruction::AUIPC { rd, imm } => processor.registers[rd] = processor.pc + (imm << 12),
             Instruction::ADDI { rd, rs1, imm } => {
                 processor.registers[rd] = processor.registers[rs1].wrapping_add(imm.into())
             }
@@ -87,6 +91,34 @@ impl InstructionSet for Instruction {
             }
             Instruction::AND { rd, rs1, rs2 } => {
                 processor.registers[rd] = processor.registers[rs1] & processor.registers[rs2]
+            }
+            Instruction::CSRRW {
+                rd,
+                rs1: Register::ZERO,
+                csr,
+            } => processor.registers[rd] = processor.csrs.read(csr),
+            Instruction::CSRRW { rd, rs1, csr } => {
+                processor.registers[rd] = processor.csrs.read_write(csr, processor.registers[rs1])
+            }
+            Instruction::CSRRS { rd, rs1, csr } => {
+                processor.registers[rd] = processor.csrs.set_bits(csr, processor.registers[rs1])
+            }
+            Instruction::CSRRC { rd, rs1, csr } => {
+                processor.registers[rd] = processor.csrs.clear_bits(csr, processor.registers[rs1])
+            }
+            Instruction::CSRRWI { rd, csr, imm } => {
+                processor.registers[rd] = processor
+                    .csrs
+                    .read_write(csr, Self::RegisterType::from(imm))
+            }
+            Instruction::CSRRSI { rd, csr, imm } => {
+                processor.registers[rd] =
+                    processor.csrs.set_bits(csr, Self::RegisterType::from(imm))
+            }
+            Instruction::CSRRCI { rd, csr, imm } => {
+                processor.registers[rd] = processor
+                    .csrs
+                    .clear_bits(csr, Self::RegisterType::from(imm))
             }
             Instruction::LB { rd, rs1, offset } => {
                 processor.registers[rd] = processor.memory.load_byte(
@@ -179,17 +211,33 @@ mod test {
             memory_state!($($location: $value,)*)
         };
     }
+    macro_rules! csr_state {
+        ($($index:literal: $value:expr),* $(,)?) => {
+            {
+                let csr = CSR32::default();
+                $(
+                    csr.read_write($index, $value);
+                )*
+                csr
+            }
+        };
+        ({$($location:literal: $value:expr),* $(,)?}) => {
+            csr_state!($($location: $value,)*)
+        };
+    }
     macro_rules! processor_state {
         (
             registers: $register_state:tt
             $(, memory: $memory_state:tt)?
             $(, pc: $program_counter1:expr)?
+            $(, csr: $csr:tt)?
             $(,)?
         ) => {
-            Processor {
+            Processor::<i32, CSR32> {
                 registers: register_state!($register_state)
                 $(, memory: memory_state!($memory_state))?
                 $(, pc: $program_counter1)?
+                $(, csrs: csr_state!($csr))?
                 , ..Default::default()
             }
         };
@@ -198,6 +246,7 @@ mod test {
                 registers: $register_state:tt
                 $(, memory: $memory_state:tt)?
                 $(, pc: $program_counter2:expr)?
+                $(, csr: $csr:tt)?
                 $(,)?
             }
         ) => {
@@ -205,11 +254,12 @@ mod test {
                 registers: $register_state
                 $(, memory: $memory_state)?
                 $(, pc: $program_counter2)?
+                $(, csr: $csr)?
             )
         };
     }
     macro_rules! test_execute {
-        ($instruction:expr, changes: $initial_state:tt, to: $final_state:tt $(,)?) => {
+        ($instruction:expr, changes: $initial_state:tt, to: $final_state:tt $(,)?) => {{
             // Arrange
             let mut processor = processor_state!($initial_state);
 
@@ -217,11 +267,13 @@ mod test {
             $instruction.execute(&mut processor).unwrap();
 
             // Assert
-            assert_eq!(processor, processor_state!($final_state));
-        };
+            let expected_state = processor_state!($final_state);
+            assert_eq!(processor, expected_state);
+            processor
+        }};
     }
     macro_rules! test_execute_many {
-        ($instructions:expr, changes: $initial_state:tt, to: $final_state:tt $(,)?) => {
+        ($instructions:expr, changes: $initial_state:tt, to: $final_state:tt $(,)?) => {{
             // Arrange
             let mut processor = processor_state!($initial_state);
 
@@ -231,8 +283,10 @@ mod test {
             }
 
             // Assert
-            assert_eq!(processor, processor_state!($final_state));
-        };
+            let expected_state = processor_state!($final_state);
+            assert_eq!(processor, expected_state);
+            processor
+        }};
     }
 
     #[test]
@@ -934,6 +988,208 @@ mod test {
             Instruction::SW {  rs1: Register::T1,rs2: Register::T3, offset: 31, },
             changes: {registers: {t1: 3, t3: 12}},
             to: {registers: {t1: 3, t3: 12}, memory: {34: 12}},
+        );
+    }
+
+    #[test]
+    fn execute_csrrw() {
+        test_execute!(
+            Instruction::CSRRW { rd: Register::A0, rs1: Register::S10, csr: 20 },
+            changes: {registers: {a0: 3, s10: 12}},
+            to: {registers: {a0: 0, s10: 12}, csr: {20: 12}},
+        );
+        test_execute!(
+            Instruction::CSRRW { rd: Register::T1, rs1: Register::T0, csr: 5 },
+            changes: {registers: {t1: 3, t0: 12}, csr: {5: 42}},
+            to: {registers: {t1: 42, t0: 12}, csr: {5: 12}},
+        );
+    }
+
+    #[test]
+    fn execute_csrr() {
+        test_execute_many!(
+            Instruction::CSRR(Register::S3, 42),
+            changes: {registers: {s3: 0}},
+            to: {registers: {s3: 0}},
+        );
+        test_execute_many!(
+            Instruction::CSRR(Register::S6, 42),
+            changes: {registers: {s6: 3}, csr: {42: 42}},
+            to: {registers: {s6: 42}, csr: {42: 42}},
+        );
+    }
+
+    #[test]
+    fn execute_csrw() {
+        test_execute_many!(
+            Instruction::CSRW(Register::S3, 42),
+            changes: {registers: {s3: 0}},
+            to: {registers: {s3: 0}},
+        );
+        test_execute_many!(
+            Instruction::CSRW(Register::S6, 42),
+            changes: {registers: {s6: 3}, csr: {42: 42}},
+            to: {registers: {s6: 3}, csr: {42: 3}},
+        );
+    }
+
+    #[test]
+    fn execute_csrrs() {
+        test_execute!(
+            Instruction::CSRRS { rd: Register::T2, rs1: Register::S4, csr: 20 },
+            changes: {registers: {t2: 3, s4: 12}},
+            to: {registers: {t2: 0, s4: 12}, csr: {20: 12}},
+        );
+        test_execute!(
+            Instruction::CSRRS { rd: Register::S8, rs1: Register::ZERO, csr: 20 },
+            changes: {registers: {s8: 3}, csr: {20: 12}},
+            to: {registers: {s8: 12}, csr: {20: 12}},
+        );
+        test_execute!(
+            Instruction::CSRRS { rd: Register::A6, rs1: Register::S7, csr: 5 },
+            changes: {registers: {a6: 3, s7: 0b10010010}, csr: {5: 0b10000101}},
+            to: {registers: {a6: 0b10000101, s7: 0b10010010}, csr: {5: 0b10010111}},
+        );
+    }
+
+    #[test]
+    fn execute_csrrc() {
+        test_execute!(
+            Instruction::CSRRC { rd: Register::RA, rs1: Register::GP, csr: 20 },
+            changes: {registers: {ra: 3, gp: 12}},
+            to: {registers: {ra: 0, gp: 12}},
+        );
+        test_execute!(
+            Instruction::CSRRS { rd: Register::S9, rs1: Register::ZERO, csr: 20 },
+            changes: {registers: {s9: 30}, csr: {20: 12}},
+            to: {registers: {s9: 12}, csr: {20: 12}},
+        );
+        test_execute!(
+            Instruction::CSRRC { rd: Register::TP, rs1: Register::A7, csr: 5 },
+            changes: {registers: {tp: 3, a7: 0b10010010}, csr: {5: 0b10000101}},
+            to: {registers: {tp: 0b10000101, a7: 0b10010010}, csr: {5: 0b00000101}},
+        );
+    }
+
+    #[test]
+    fn execute_csrs() {
+        test_execute_many!(
+            Instruction::CSRS(Register::S3, 42),
+            changes: {registers: {s3: 0}},
+            to: {registers: {s3: 0}},
+        );
+        test_execute_many!(
+            Instruction::CSRS(Register::S7, 5),
+            changes: {registers: {s7: 0b10010010}, csr: {5: 0b10000101}},
+            to: {registers: {s7: 0b10010010}, csr: {5: 0b10010111}},
+        );
+    }
+
+    #[test]
+    fn execute_csrc() {
+        test_execute_many!(
+            Instruction::CSRC(Register::S3, 42),
+            changes: {registers: {s3: 0}},
+            to: {registers: {s3: 0}},
+        );
+        test_execute_many!(
+            Instruction::CSRC(Register::SP, 5),
+            changes: {registers: {sp: 0b10010010}, csr: {5: 0b10000101}},
+            to: {registers: {sp: 0b10010010}, csr: {5: 0b00000101}},
+        );
+    }
+
+    #[test]
+    fn execute_csrrwi() {
+        test_execute!(
+            Instruction::CSRRWI { rd: Register::A0, imm: 12, csr: 20 },
+            changes: {registers: {a0: 3}},
+            to: {registers: {a0: 0}, csr: {20: 12}},
+        );
+        test_execute!(
+            Instruction::CSRRWI { rd: Register::T1, imm: 32, csr: 5 },
+            changes: {registers: {t1: 3}, csr: {5: 42}},
+            to: {registers: {t1: 42}, csr: {5: 32}},
+        );
+    }
+
+    #[test]
+    fn execute_csrrsi() {
+        test_execute!(
+            Instruction::CSRRSI { rd: Register::T2, imm: 12, csr: 20 },
+            changes: {registers: {t2: 3}},
+            to: {registers: {t2: 0}, csr: {20: 12}},
+        );
+        test_execute!(
+            Instruction::CSRRSI { rd: Register::S8, imm: 0, csr: 20 },
+            changes: {registers: {s8: 3}, csr: {20: 12}},
+            to: {registers: {s8: 12}, csr: {20: 12}},
+        );
+        test_execute!(
+            Instruction::CSRRSI { rd: Register::A6, imm: 0b01010, csr: 5 },
+            changes: {registers: {a6: 3}, csr: {5: 0b10000101}},
+            to: {registers: {a6: 0b10000101}, csr: {5: 0b10001111}},
+        );
+    }
+
+    #[test]
+    fn execute_csrrci() {
+        test_execute!(
+            Instruction::CSRRCI { rd: Register::RA, imm: 12, csr: 20 },
+            changes: {registers: {ra: 3}},
+            to: {registers: {ra: 0}},
+        );
+        test_execute!(
+            Instruction::CSRRSI { rd: Register::S9, imm: 0, csr: 20 },
+            changes: {registers: {s9: 30}, csr: {20: 12}},
+            to: {registers: {s9: 12}, csr: {20: 12}},
+        );
+        test_execute!(
+            Instruction::CSRRCI { rd: Register::TP, imm: 0b10101, csr: 5 },
+            changes: {registers: {tp: 3}, csr: {5: 0b10000101}},
+            to: {registers: {tp: 0b10000101}, csr: {5: 0b10000000}},
+        );
+    }
+
+    #[test]
+    fn execute_csrwi() {
+        test_execute_many!(
+            Instruction::CSRWI(42, 0),
+            changes: {registers: {}},
+            to: {registers: {}},
+        );
+        test_execute_many!(
+            Instruction::CSRWI(42, 5),
+            changes: {registers: {}, csr: {42: 42}},
+            to: {registers: {}, csr: {42: 5}},
+        );
+    }
+
+    #[test]
+    fn execute_csrsi() {
+        test_execute_many!(
+            Instruction::CSRSI(42, 0),
+            changes: {registers: {}},
+            to: {registers: {}},
+        );
+        test_execute_many!(
+            Instruction::CSRSI(5, 0b10101),
+            changes: {registers: {}, csr: {5: 0b10000101}},
+            to: {registers: {}, csr: {5: 0b10010101}},
+        );
+    }
+
+    #[test]
+    fn execute_csrci() {
+        test_execute_many!(
+            Instruction::CSRCI(42, 0),
+            changes: {registers: {}},
+            to: {registers: {}},
+        );
+        test_execute_many!(
+            Instruction::CSRCI(5, 0b10011),
+            changes: {registers: {}, csr: {5: 0b10000101}},
+            to: {registers: {}, csr: {5: 0b10000100}},
         );
     }
 }

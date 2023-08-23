@@ -211,6 +211,123 @@ impl Instruction {
             rs1: Register::ZERO,
             imm: 0,
         });
+
+    /// # Read CSR
+    ///
+    /// Read CSR
+    ///
+    /// Note: This pseudoinstruction desugars to `CSRRW rd, csr, x0`
+    /// See
+    /// [ref](https://github.com/riscv-non-isa/riscv-asm-manual/blob/master/riscv-asm.md#pseudoinstructions-for-accessing-control-and-status-registers)
+    #[allow(non_snake_case)]
+    pub(crate) fn CSRR(rd: Register, csr: u16) -> PseudoinstructionMappingIter {
+        PseudoinstructionMappingIter::One(Instruction::CSRRW {
+            rd,
+            rs1: Register::ZERO,
+            csr,
+        })
+    }
+
+    /// # Write CSR
+    ///
+    /// Write CSR, no read side effects should be caused by this instruction.
+    ///
+    /// Note: This pseudoinstruction desugars to `CSRRW x0, csr, rs`
+    /// See
+    /// [ref](https://github.com/riscv-non-isa/riscv-asm-manual/blob/master/riscv-asm.md#pseudoinstructions-for-accessing-control-and-status-registers)
+    #[allow(non_snake_case)]
+    pub(crate) fn CSRW(rs1: Register, csr: u16) -> PseudoinstructionMappingIter {
+        PseudoinstructionMappingIter::One(Instruction::CSRRW {
+            rd: Register::ZERO,
+            rs1,
+            csr,
+        })
+    }
+
+    /// # Set bits in CSR
+    ///
+    /// Sets the bits in CSR, no read side effects should be caused by this
+    /// instruction.
+    ///
+    /// Note: This pseudoinstruction desugars to `CSRRS x0, csr, rs`
+    /// See
+    /// [ref](https://github.com/riscv-non-isa/riscv-asm-manual/blob/master/riscv-asm.md#pseudoinstructions-for-accessing-control-and-status-registers)
+    #[allow(non_snake_case)]
+    pub(crate) fn CSRS(rs1: Register, csr: u16) -> PseudoinstructionMappingIter {
+        PseudoinstructionMappingIter::One(Instruction::CSRRS {
+            rd: Register::ZERO,
+            rs1,
+            csr,
+        })
+    }
+
+    /// # Clear bits in CSR
+    ///
+    /// Clear bits in CSR, no read side effects should be caused by this
+    /// instruction.
+    ///
+    /// Note: This pseudoinstruction desugars to `CSRRC x0, csr, rs`
+    /// See
+    /// [ref](https://github.com/riscv-non-isa/riscv-asm-manual/blob/master/riscv-asm.md#pseudoinstructions-for-accessing-control-and-status-registers)
+    #[allow(non_snake_case)]
+    pub(crate) fn CSRC(rs1: Register, csr: u16) -> PseudoinstructionMappingIter {
+        PseudoinstructionMappingIter::One(Instruction::CSRRC {
+            rd: Register::ZERO,
+            rs1,
+            csr,
+        })
+    }
+
+    /// # Write CSR, immediate
+    ///
+    /// Writes into CSR, using the immediate value. This instruction should
+    /// not cause any read side effects.
+    ///
+    /// Note: This pseudoinstruction desugars to `CSRRWI x0, csr, imm`
+    /// See
+    /// [ref](https://github.com/riscv-non-isa/riscv-asm-manual/blob/master/riscv-asm.md#pseudoinstructions-for-accessing-control-and-status-registers)
+    #[allow(non_snake_case)]
+    pub(crate) fn CSRWI(csr: u16, imm: u8) -> PseudoinstructionMappingIter {
+        PseudoinstructionMappingIter::One(Instruction::CSRRWI {
+            rd: Register::ZERO,
+            imm,
+            csr,
+        })
+    }
+
+    /// # Set bits in CSR, immediate
+    ///
+    /// Sets bits in CSR using the immediate value. This instruction should
+    /// not cause any read side effects.
+    ///
+    /// Note: This pseudoinstruction desugars to `CSRRSI x0, csr, imm`
+    /// See
+    /// [ref](https://github.com/riscv-non-isa/riscv-asm-manual/blob/master/riscv-asm.md#pseudoinstructions-for-accessing-control-and-status-registers)
+    #[allow(non_snake_case)]
+    pub(crate) fn CSRSI(csr: u16, imm: u8) -> PseudoinstructionMappingIter {
+        PseudoinstructionMappingIter::One(Instruction::CSRRSI {
+            rd: Register::ZERO,
+            imm,
+            csr,
+        })
+    }
+
+    /// # Clear bits in CSR, immediate
+    ///
+    /// Clears bits in CSR using the immediate value. This instruction should
+    /// not cause any read side effects.
+    ///
+    /// Note: This pseudoinstruction desugars to `CSRRCI x0, csr, imm`
+    /// See
+    /// [ref](https://github.com/riscv-non-isa/riscv-asm-manual/blob/master/riscv-asm.md#pseudoinstructions-for-accessing-control-and-status-registers)
+    #[allow(non_snake_case)]
+    pub(crate) fn CSRCI(csr: u16, imm: u8) -> PseudoinstructionMappingIter {
+        PseudoinstructionMappingIter::One(Instruction::CSRRCI {
+            rd: Register::ZERO,
+            imm,
+            csr,
+        })
+    }
 }
 
 fn sign_extend_i12(value: i32) -> i16 {
@@ -253,5 +370,87 @@ mod test {
         let max_i12 = 0b_0111_1111_1111 as i32;
         assert!(!is_positive_i12(neg_1));
         assert!(is_positive_i12(max_i12));
+    }
+
+    #[test]
+    fn iter_test() {
+        let pseudoinstruction = PseudoinstructionMappingIter::Three(
+            Instruction::ADD {
+                rd: Register::SP,
+                rs1: Register::A0,
+                rs2: Register::A2,
+            },
+            Instruction::SUB {
+                rd: Register::SP,
+                rs1: Register::A0,
+                rs2: Register::A1,
+            },
+            Instruction::OR {
+                rd: Register::SP,
+                rs1: Register::A0,
+                rs2: Register::A1,
+            },
+        );
+        assert_eq!(
+            pseudoinstruction.collect::<Vec<_>>(),
+            vec![
+                Instruction::ADD {
+                    rd: Register::SP,
+                    rs1: Register::A0,
+                    rs2: Register::A2,
+                },
+                Instruction::SUB {
+                    rd: Register::SP,
+                    rs1: Register::A0,
+                    rs2: Register::A1,
+                },
+                Instruction::OR {
+                    rd: Register::SP,
+                    rs1: Register::A0,
+                    rs2: Register::A1,
+                },
+            ]
+        );
+    }
+
+    #[test]
+    fn rev_iter_test() {
+        let pseudoinstruction = PseudoinstructionMappingIter::Three(
+            Instruction::ADD {
+                rd: Register::SP,
+                rs1: Register::A0,
+                rs2: Register::A2,
+            },
+            Instruction::SUB {
+                rd: Register::SP,
+                rs1: Register::A0,
+                rs2: Register::A1,
+            },
+            Instruction::OR {
+                rd: Register::SP,
+                rs1: Register::A0,
+                rs2: Register::A1,
+            },
+        );
+        assert_eq!(
+            pseudoinstruction.rev().collect::<Vec<_>>(),
+            vec![
+                Instruction::OR {
+                    rd: Register::SP,
+                    rs1: Register::A0,
+                    rs2: Register::A1,
+                },
+                Instruction::SUB {
+                    rd: Register::SP,
+                    rs1: Register::A0,
+                    rs2: Register::A1,
+                },
+                Instruction::ADD {
+                    rd: Register::SP,
+                    rs1: Register::A0,
+                    rs2: Register::A2,
+                },
+            ]
+        );
     }
 }

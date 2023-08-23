@@ -1,4 +1,6 @@
 #![allow(clippy::unusual_byte_groupings, clippy::upper_case_acronyms)]
+mod csr;
+mod csr_imm;
 mod funct3;
 mod funct6;
 mod funct7;
@@ -13,8 +15,8 @@ mod shamt;
 mod simmi;
 
 use self::{
-    funct3::Funct3, funct6::Funct6, funct7::Funct7, immi::ImmI, immu::ImmU, rd::Rd, rs1::Rs1,
-    rs2::Rs2, shamt::Shamt, simmi::SImmI,
+    csr::Csr, csr_imm::CsrImm, funct3::Funct3, funct6::Funct6, funct7::Funct7, immi::ImmI,
+    immu::ImmU, rd::Rd, rs1::Rs1, rs2::Rs2, shamt::Shamt, simmi::SImmI,
 };
 
 use crate::registers::Register;
@@ -340,7 +342,7 @@ pub(super) enum Instruction {
     ///
     /// Store 8-bit, values from the low bits of register rs2 to memory.
     ///
-    /// M[rs1 + sext(offset)] = rs2[7:0]
+    /// `M[rs1 + sext(offset)] = rs2[7:0]`
     SB {
         rs1: Register,
         rs2: Register,
@@ -351,7 +353,7 @@ pub(super) enum Instruction {
     ///
     /// Store 16-bit, values from the low bits of register rs2 to memory.
     ///
-    /// M[rs1 + sext(offset)] = rs2[15:0]
+    /// `M[rs1 + sext(offset)] = rs2[15:0]`
     SH {
         rs1: Register,
         rs2: Register,
@@ -362,12 +364,84 @@ pub(super) enum Instruction {
     ///
     /// Store 32-bit, values from the low bits of register rs2 to memory.
     ///
-    /// M[rs1 + sext(offset)] = rs2[31:0]
+    /// `M[rs1 + sext(offset)] = rs2[31:0]`
     SW {
         rs1: Register,
         rs2: Register,
         offset: i16,
     },
+
+    /// # Atomic CSR read write
+    ///
+    /// Atomically swaps values in the CSRs and integer registers.
+    /// CSRRW reads the old value of the CSR, zero-extends the value to XLEN
+    /// bits, then writes it to integer register rd.
+    /// The initial value in rs1 is written to the CSR.
+    /// If rd=x0, then the instruction shall not read the CSR and shall not
+    /// cause any of the side effects that might occur on a CSR read.
+    ///
+    /// `t = CSRs[csr]; CSRs[csr] = rs1; rd = t`
+    CSRRW {
+        rd: Register,
+        rs1: Register,
+        csr: u16,
+    },
+
+    /// # Atomic CSR read set
+    ///
+    /// Reads the value of the CSR, zero-extends the value to XLEN bits, and
+    /// writes it to integer register rd. The initial value in integer register
+    /// rs1 is treated as a bit mask that specifies bit positions to be set in
+    /// the CSR. Any bit that is high in rs1 will cause the corresponding bit
+    /// to be set in the CSR, if that CSR bit is writable. Other bits in the
+    /// CSR are unaffected (though CSRs might have side effects when written).
+    ///
+    /// `t = CSRs[csr]; CSRs[csr] = t | rs1; rd = t`
+    CSRRS {
+        rd: Register,
+        rs1: Register,
+        csr: u16,
+    },
+
+    /// # Atomic CSR read clear
+    ///
+    /// Reads the value of the CSR, zero-extends the value to XLEN bits, and
+    /// writes it to integer register rd. The initial value in integer register
+    /// rs1 is treated as a bit mask that specifies bit positions to be cleared
+    /// in the CSR. Any bit that is high in rs1 will cause the corresponding
+    /// bit to be cleared in the CSR, if that CSR bit is writable. Other bits
+    /// in the CSR are unaffected.
+    ///
+    /// `t = CSRs[csr]; CSRs[csr] = t & ∼rs1; rd = t`
+    CSRRC {
+        rd: Register,
+        rs1: Register,
+        csr: u16,
+    },
+
+    /// # Atomic CSR read write immediate
+    ///
+    /// Update the CSR using an XLEN-bit value obtained by zero-extending a
+    /// 5-bit unsigned immediate (uimm[4:0]) field encoded in the rs1 field.
+    ///
+    /// `rd = CSRs[csr]; CSRs[csr] = zext(imm)`
+    CSRRWI { rd: Register, csr: u16, imm: u8 },
+
+    /// # Atomic CSR read set immediate
+    ///
+    /// Set CSR bit using an XLEN-bit value obtained by zero-extending a 5-bit
+    /// unsigned immediate (uimm[4:0]) field encoded in the rs1 field.
+    ///
+    /// `t = CSRs[csr]; CSRs[csr] = t | zext(imm); rd = t`
+    CSRRSI { rd: Register, csr: u16, imm: u8 },
+
+    /// # Atomic CSR read clear immediate
+    ///
+    /// Clear CSR bit using an XLEN-bit value obtained by zero-extending a
+    /// 5-bit unsigned immediate (uimm[4:0]) field encoded in the rs1 field.
+    ///
+    /// `t = CSRs[csr]; CSRs[csr] = t & ~zext(imm); rd = t`
+    CSRRCI { rd: Register, csr: u16, imm: u8 },
 }
 
 impl From<u32> for Instruction {
@@ -540,6 +614,42 @@ impl From<u32> for Instruction {
                     rs1: *Rs1::from(value),
                     rs2: *Rs2::from(value),
                     offset: *SImmI::from(value),
+                },
+                _ => unimplemented!(
+                    "The given instruction is not yet implemented {:#034b}",
+                    value.to_le()
+                ),
+            },
+            0b_1110011 => match *Funct3::from(value) {
+                0b_001 => Instruction::CSRRW {
+                    rd: *Rd::from(value),
+                    rs1: *Rs1::from(value),
+                    csr: *Csr::from(value),
+                },
+                0b_010 => Instruction::CSRRS {
+                    rd: *Rd::from(value),
+                    rs1: *Rs1::from(value),
+                    csr: *Csr::from(value),
+                },
+                0b_011 => Instruction::CSRRC {
+                    rd: *Rd::from(value),
+                    rs1: *Rs1::from(value),
+                    csr: *Csr::from(value),
+                },
+                0b_101 => Instruction::CSRRWI {
+                    rd: *Rd::from(value),
+                    imm: *CsrImm::from(value),
+                    csr: *Csr::from(value),
+                },
+                0b_110 => Instruction::CSRRSI {
+                    rd: *Rd::from(value),
+                    imm: *CsrImm::from(value),
+                    csr: *Csr::from(value),
+                },
+                0b_111 => Instruction::CSRRCI {
+                    rd: *Rd::from(value),
+                    imm: *CsrImm::from(value),
+                    csr: *Csr::from(value),
                 },
                 _ => unimplemented!(
                     "The given instruction is not yet implemented {:#034b}",
@@ -908,6 +1018,78 @@ mod test {
                 rs1: Register::A3,
                 rs2: Register::T6,
                 offset: 63,
+            }
+        );
+    }
+
+    #[test]
+    fn csrrw_from_i32() {
+        assert_eq!(
+            Instruction::from(u32::from_le(0b_0001001_11111_01111_001_11011_1110011)),
+            Instruction::CSRRW {
+                rd: Register::S11,
+                rs1: Register::A5,
+                csr: 319,
+            }
+        );
+    }
+
+    #[test]
+    fn csrrs_from_i32() {
+        assert_eq!(
+            Instruction::from(u32::from_le(0b_0101001_11111_01011_010_10011_1110011)),
+            Instruction::CSRRS {
+                rd: Register::S3,
+                rs1: Register::A1,
+                csr: 1343,
+            }
+        );
+    }
+
+    #[test]
+    fn csrrc_from_i32() {
+        assert_eq!(
+            Instruction::from(u32::from_le(0b_1101001_11111_01001_011_10111_1110011)),
+            Instruction::CSRRC {
+                rd: Register::S7,
+                rs1: Register::S1,
+                csr: 3391,
+            }
+        );
+    }
+
+    #[test]
+    fn csrrwi_from_i32() {
+        assert_eq!(
+            Instruction::from(u32::from_le(0b_0000001_11011_01001_101_10101_1110011)),
+            Instruction::CSRRWI {
+                rd: Register::S5,
+                imm: 9,
+                csr: 59,
+            }
+        );
+    }
+
+    #[test]
+    fn csrrsi_from_i32() {
+        assert_eq!(
+            Instruction::from(u32::from_le(0b_0000001_01010_11011_110_10100_1110011)),
+            Instruction::CSRRSI {
+                rd: Register::S4,
+                imm: 27,
+                csr: 42,
+            }
+        );
+    }
+
+    #[test]
+    fn csrrci_from_i32() {
+        assert_eq!(
+            Instruction::from(u32::from_le(0b_0000011_11011_11001_111_10001_1110011)),
+            Instruction::CSRRCI {
+                rd: Register::A7,
+                imm: 25,
+                csr: 123,
             }
         );
     }
