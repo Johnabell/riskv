@@ -1,4 +1,4 @@
-use crate::csr::{CSR, CSR32};
+use crate::csr::{ControlStatusRegisters, CSR32};
 use crate::instruction_set::{Exception, InstructionSet};
 use crate::integer::{AsSigned, AsUnsigned};
 use crate::processor::Processor;

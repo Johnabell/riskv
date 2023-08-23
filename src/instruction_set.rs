@@ -1,11 +1,11 @@
-use crate::{csr::CSR, processor::Processor};
+use crate::{csr::ControlStatusRegisters, processor::Processor};
 
 #[derive(Debug)]
 pub enum Exception {}
 
 pub trait InstructionSet: Sized {
     type RegisterType;
-    type CSRType: CSR<Register = Self::RegisterType>;
+    type CSRType: ControlStatusRegisters<Register = Self::RegisterType>;
 
     /// Decode this 32-bit value as an instruction
     fn decode(raw_instruction: u32) -> Result<Self, Exception>;

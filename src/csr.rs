@@ -4,7 +4,7 @@ use std::sync::atomic::{AtomicI32, AtomicI64, Ordering::SeqCst};
 const CSR_SIZE: usize = 4096;
 
 /// The control status registers.
-pub trait CSR {
+pub trait ControlStatusRegisters {
     type Register;
     /// Reads the value of the CSR.
     ///
@@ -70,6 +70,11 @@ pub struct CSR64 {
     registers: Box<[AtomicI64]>,
 }
 
+/// This macro implement `new`, `Default::default()`, and
+/// `ControlStatusRegisters` for the given struct.
+///
+/// The struct must contain a single field called `registers` containing a
+/// boxed slice of some `Atomic` integer.
 macro_rules! implement_csr {
     ($struct_name: ty, $register_type:ty) => {
         impl $struct_name {
@@ -86,7 +91,7 @@ macro_rules! implement_csr {
                 Self::new()
             }
         }
-        impl CSR for $struct_name {
+        impl ControlStatusRegisters for $struct_name {
             type Register = $register_type;
 
             fn read(&self, index: u16) -> Self::Register {
@@ -111,12 +116,12 @@ macro_rules! implement_csr {
 #[cfg(test)]
 impl PartialEq for CSR32 {
     fn eq(&self, other: &Self) -> bool {
-        for (index, value) in self.registers.iter().enumerate() {
-            if value.load(SeqCst) != other.registers[index].load(SeqCst) {
-                return false;
-            }
-        }
-        true
+        self.registers.len() == other.registers.len()
+            && self
+                .registers
+                .iter()
+                .zip(other.registers.iter())
+                .all(|(a, b)| a.load(SeqCst) == b.load(SeqCst))
     }
 }
 
@@ -130,37 +135,63 @@ mod test {
     #[test]
     fn initial_value_zero() {
         let csr_32 = CSR32::default();
-        let csr_64 = CSR32::default();
+        let csr_64 = CSR64::default();
 
-        assert_eq!(csr_32.set_bits(42, 0), 0);
-        assert_eq!(csr_64.set_bits(42, 0), 0);
+        assert_eq!(csr_32.read(42), 0);
+        assert_eq!(csr_64.read(42), 0);
     }
 
     #[test]
-    fn set_bits() {
+    fn set_bits_32() {
         let csr_32 = CSR32::default();
-        let csr_64 = CSR32::default();
 
         assert_eq!(csr_32.set_bits(42, -1), 0);
-        assert_eq!(csr_64.set_bits(42, -1), 0);
-        assert_eq!(csr_32.set_bits(42, 0), -1);
-        assert_eq!(csr_64.set_bits(42, 0), -1);
+        assert_eq!(csr_32.read(42), -1);
         assert_eq!(csr_32.set_bits(42, -1), -1);
-        assert_eq!(csr_64.set_bits(42, -1), -1);
-        assert_eq!(csr_32.set_bits(42, 0), -1);
-        assert_eq!(csr_64.set_bits(42, 0), -1);
+        assert_eq!(csr_32.read(42), -1);
     }
 
     #[test]
-    fn clear_bits() {
+    fn set_bits_64() {
+        let csr_64 = CSR64::default();
+
+        assert_eq!(csr_64.set_bits(42, -1), 0);
+        assert_eq!(csr_64.read(42), -1);
+        assert_eq!(csr_64.set_bits(42, -1), -1);
+        assert_eq!(csr_64.read(42), -1);
+    }
+
+    #[test]
+    fn clear_bits_32() {
         let csr_32 = CSR32::default();
-        let csr_64 = CSR32::default();
 
         assert_eq!(csr_32.set_bits(42, -1), 0);
-        assert_eq!(csr_64.set_bits(42, -1), 0);
         assert_eq!(csr_32.clear_bits(42, -1), -1);
+        assert_eq!(csr_32.read(42), 0);
+    }
+
+    #[test]
+    fn clear_bits_64() {
+        let csr_64 = CSR64::default();
+
+        assert_eq!(csr_64.set_bits(42, -1), 0);
         assert_eq!(csr_64.clear_bits(42, -1), -1);
-        assert_eq!(csr_32.set_bits(42, 0), 0);
-        assert_eq!(csr_64.set_bits(42, 0), 0);
+        assert_eq!(csr_64.read(42), 0);
+    }
+
+    #[test]
+    fn read_write_32() {
+        let csr_32 = CSR32::default();
+
+        assert_eq!(csr_32.read_write(42, 100), 0);
+        assert_eq!(csr_32.read_write(42, 50), 100);
+    }
+
+    #[test]
+    fn read_write_64() {
+        let csr_64 = CSR64::default();
+
+        assert_eq!(csr_64.read_write(42, 100), 0);
+        assert_eq!(csr_64.read_write(42, 50), 100);
     }
 }
