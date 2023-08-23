@@ -107,8 +107,12 @@ impl<T> Deref for ZeroRegister<T> {
     }
 }
 
-impl<T> DerefMut for ZeroRegister<T> {
+impl<T> DerefMut for ZeroRegister<T>
+where
+    T: Default,
+{
     fn deref_mut(&mut self) -> &mut Self::Target {
+        self._zero = T::default();
         &mut self._zero
     }
 }
@@ -306,7 +310,10 @@ impl<T> std::ops::Index<Register> for Registers<T> {
     }
 }
 
-impl<T> std::ops::IndexMut<u8> for Registers<T> {
+impl<T> std::ops::IndexMut<u8> for Registers<T>
+where
+    T: Default,
+{
     fn index_mut(&mut self, index: u8) -> &mut Self::Output {
         match index {
             0 => &mut self.zero,
@@ -346,7 +353,10 @@ impl<T> std::ops::IndexMut<u8> for Registers<T> {
     }
 }
 
-impl<T> std::ops::IndexMut<Register> for Registers<T> {
+impl<T> std::ops::IndexMut<Register> for Registers<T>
+where
+    T: Default,
+{
     fn index_mut(&mut self, index: Register) -> &mut Self::Output {
         match index {
             Register::ZERO => &mut self.zero,
@@ -406,6 +416,13 @@ mod test {
         let mut register_zero = ZeroRegister::<i32>::default();
         *register_zero = 23;
         assert_eq!(*register_zero, 0);
+    }
+
+    #[test]
+    fn register_zero_deref_mut_twice() {
+        let mut register_zero = ZeroRegister::<i32>::default();
+        *register_zero = 23;
+        assert_eq!(register_zero.deref_mut(), &mut 0);
     }
 
     #[test]
