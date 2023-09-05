@@ -1,7 +1,22 @@
+use std::fmt::Display;
+
 use crate::{csr::ControlStatusRegisters, processor::Processor};
 
 #[derive(Debug)]
-pub enum Exception {}
+pub enum Exception {
+    UnimplementedInstruction(u32),
+}
+
+impl Display for Exception {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::UnimplementedInstruction(instuction) => f.write_fmt(format_args!(
+                "The given instruction is not yet implemented {:#034b}",
+                instuction.to_le()
+            )),
+        }
+    }
+}
 
 pub trait InstructionSet: Sized {
     type RegisterType;
