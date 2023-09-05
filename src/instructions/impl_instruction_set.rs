@@ -16,13 +16,17 @@ impl InstructionSet for Instruction {
         Ok(raw_instruction.into())
     }
 
+    fn instruction_size(&self) -> Self::RegisterType {
+        4
+    }
+
     fn execute(
         self,
         processor: &mut Processor<Self::RegisterType, Self::CSRType>,
     ) -> Result<(), Exception> {
         // By default, after this instruction, we will move to the next one. Instructions that do
         // something different e.g. JAL can set this variable to modify the pc.
-        let pc = processor.pc + 4;
+        let pc = processor.pc + self.instruction_size();
 
         match self {
             Instruction::LUI { rd, imm } => processor.registers[rd] = imm << 12,
