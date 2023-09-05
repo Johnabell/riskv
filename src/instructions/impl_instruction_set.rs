@@ -12,10 +12,12 @@ impl InstructionSet for Instruction {
     type RegisterType = i32;
     type CSRType = CSR32;
 
+    #[inline]
     fn decode(raw_instruction: u32) -> Result<Self, Exception> {
         Ok(raw_instruction.into())
     }
 
+    #[inline]
     fn instruction_size(&self) -> Self::RegisterType {
         4
     }
