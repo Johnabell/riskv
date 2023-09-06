@@ -8,6 +8,11 @@ impl Funct7 {
     pub(super) const fn decode(value: u32) -> u8 {
         ((value & Self::MASK) >> Self::RSHIFT) as u8
     }
+
+    #[inline]
+    pub(super) const fn encode(value: u8) -> u32 {
+        (value as u32) << Self::RSHIFT
+    }
 }
 
 #[cfg(test)]
@@ -16,8 +21,20 @@ mod test {
     use pretty_assertions::assert_eq;
 
     #[test]
-    fn decode_u32() {
+    fn decode() {
         let instruction = u32::from_le(0b_0100100_01000_01000_101_00000_0010011);
         assert_eq!(Funct7::decode(instruction), 0b_0100100);
+    }
+
+    #[test]
+    fn encode() {
+        let instruction = u32::from_le(0b_0100100_00000_00000_000_00000_0000000);
+        assert_eq!(Funct7::encode(0b_0100100), instruction);
+    }
+
+    #[test]
+    fn encode_mask() {
+        let instruction = u32::from_le(0b_0110100_00000_00000_000_00000_0000000);
+        assert_eq!(Funct7::encode(0b_10110100), instruction);
     }
 }

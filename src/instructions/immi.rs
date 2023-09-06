@@ -8,6 +8,11 @@ impl ImmI {
     pub(super) const fn decode(value: u32) -> i16 {
         (((value & Self::MASK) as i32) >> Self::RSHIFT) as i16
     }
+
+    #[inline]
+    pub(super) const fn encode(value: i16) -> u32 {
+        (value as u32) << Self::RSHIFT
+    }
 }
 
 #[cfg(test)]
@@ -18,26 +23,38 @@ mod test {
     use super::*;
 
     #[test]
-    fn decode_u32() {
+    fn decode() {
         let instruction = u32::from_le(0b_0100100_01010_01100_101_01000_0010011);
         assert_eq!(ImmI::decode(instruction), i16::from_le(0b_0100100_01010));
     }
 
     #[test]
-    fn decode_u32_negative_one() {
+    fn decode_negative_one() {
         let instruction = u32::from_le(0b_1111111_11111_01100_101_01000_0010011);
         assert_eq!(ImmI::decode(instruction), -1);
     }
 
     #[test]
-    fn decode_u32_min() {
+    fn decode_min() {
         let instruction = u32::from_le(0b_1000000_00000_01100_101_01000_0010011);
         assert_eq!(ImmI::decode(instruction), i12::MIN);
     }
 
     #[test]
-    fn decode_u32_max() {
+    fn decode_max() {
         let instruction = u32::from_le(0b_0111111_11111_01100_101_01000_0010011);
         assert_eq!(ImmI::decode(instruction), i12::MAX);
+    }
+
+    #[test]
+    fn encode() {
+        let instruction = u32::from_le(0b_0100100_01010_00000_000_00000_0000000);
+        assert_eq!(ImmI::encode(0b_0100100_01010), instruction);
+    }
+
+    #[test]
+    fn encode_negative_one() {
+        let instruction = u32::from_le(0b_1111111_11111_00000_000_00000_0000000);
+        assert_eq!(ImmI::encode(-1), instruction);
     }
 }

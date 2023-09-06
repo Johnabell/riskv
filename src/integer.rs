@@ -1,6 +1,7 @@
 pub(crate) mod i12 {
     pub const MAX: i16 = 2047;
     pub const MIN: i16 = -2048;
+    pub const MASK: i16 = 0b_0000_1111_1111_1111;
 }
 
 pub(crate) trait AsUnsigned<N> {
