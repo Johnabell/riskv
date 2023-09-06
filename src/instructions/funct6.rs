@@ -3,12 +3,15 @@
 pub(super) struct Funct6;
 
 impl Funct6 {
+    /// This is useful as a reference but not actually required for extracting this part of the
+    /// instruction
+    #[allow(unused)]
     const MASK: u32 = u32::from_le(0b_1111110_00000_00000_000_00000_0000000);
     const RSHIFT: usize = 26;
 
     #[inline]
     pub(super) const fn decode(value: u32) -> u8 {
-        ((value & Self::MASK) >> Self::RSHIFT) as u8
+        (value >> Self::RSHIFT) as u8
     }
 
     #[inline]

@@ -1,12 +1,15 @@
 pub(super) struct ImmU;
 
 impl ImmU {
+    /// This is useful as a reference but not actually required for extracting this part of the
+    /// instruction
+    #[allow(unused)]
     pub(super) const MASK: u32 = u32::from_le(0b_1111111_11111_11111_111_00000_0000000);
     pub(super) const RSHIFT: usize = 12;
 
     #[inline]
     pub(super) const fn decode(value: u32) -> i32 {
-        ((value & Self::MASK) >> Self::RSHIFT) as i32
+        (value >> Self::RSHIFT) as i32
     }
 
     #[inline]

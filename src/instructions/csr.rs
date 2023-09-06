@@ -1,12 +1,15 @@
 pub(super) struct Csr;
 
 impl Csr {
+    /// This is useful as a reference but not actually required for extracting this part of the
+    /// instruction
+    #[allow(unused)]
     const MASK: u32 = u32::from_le(0b_1111111_11111_00000_000_00000_0000000);
     const RSHIFT: usize = 20;
 
     #[inline]
     pub(super) const fn decode(value: u32) -> u16 {
-        ((value & Self::MASK) >> Self::RSHIFT) as u16
+        (value >> Self::RSHIFT) as u16
     }
 
     #[inline]
