@@ -16,6 +16,10 @@ impl InstructionSet for Instruction {
         raw_instruction.try_into()
     }
 
+    fn encode(self) -> u32 {
+        self.encode()
+    }
+
     fn execute(
         self,
         processor: &mut Processor<Self::RegisterType, Self::CSRType>,

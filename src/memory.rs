@@ -1,6 +1,6 @@
 use crate::integer::AsSigned;
 
-#[derive(Debug, Default, PartialEq, Eq)]
+#[derive(Debug, Default, PartialEq, Eq, Clone)]
 pub struct Memory {
     data: Vec<u8>,
 }
@@ -45,7 +45,7 @@ impl Memory {
     }
 
     #[inline]
-    fn resize<const N: usize>(&mut self, location: usize) {
+    pub(super) fn resize<const N: usize>(&mut self, location: usize) {
         if location + N > self.data.len() {
             self.data.resize(location + N, 0);
         }

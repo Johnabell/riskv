@@ -22,8 +22,11 @@ pub trait InstructionSet: Sized {
     type RegisterType;
     type CSRType: ControlStatusRegisters<Register = Self::RegisterType>;
 
-    /// Decode this 32-bit value as an instruction
+    /// Decode this 32-bit value as an instruction. TODO: handle larger instructions
     fn decode(raw_instruction: u32) -> Result<Self, Exception>;
+
+    /// Encode the instruction to bytes. TODO: handle larger instructions
+    fn encode(self) -> u32;
 
     fn execute(
         self,
