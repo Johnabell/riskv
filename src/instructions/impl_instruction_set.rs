@@ -191,113 +191,9 @@ impl InstructionSet for Instruction {
 mod test {
     use super::*;
     use crate::integer::i12;
-    use crate::memory::Memory;
-    use crate::processor::Processor;
-    use crate::registers::{Register, Registers};
+    use crate::registers::Register;
+    use crate::test::macros::*;
     use pretty_assertions::assert_eq;
-
-    macro_rules! register_state {
-        ($($register:ident: $value:expr),* $(,)?) => {
-            Registers::<i32> {
-                $($register: $value,)*
-                ..Default::default()
-            }
-        };
-        ({$($register:ident: $value:expr),* $(,)?}) => {
-            register_state!($($register: $value,)*)
-        };
-    }
-    macro_rules! memory_state {
-        ($($location:literal: $value:expr),* $(,)?) => {
-            {
-                let mut mem = Memory::default();
-                $(
-                    mem.store_word($location, $value);
-                )*
-                mem
-            }
-        };
-        ({$($location:literal: $value:expr),* $(,)?}) => {
-            memory_state!($($location: $value,)*)
-        };
-    }
-    macro_rules! csr_state {
-        ($($index:literal: $value:expr),* $(,)?) => {
-            {
-                let csr = CSR32::default();
-                $(
-                    csr.read_write($index, $value);
-                )*
-                csr
-            }
-        };
-        ({$($location:literal: $value:expr),* $(,)?}) => {
-            csr_state!($($location: $value,)*)
-        };
-    }
-    macro_rules! processor_state {
-        (
-            registers: $register_state:tt
-            $(, memory: $memory_state:tt)?
-            $(, csr: $csr:tt)?
-            $(, pc: $program_counter1:expr)?
-            $(,)?
-        ) => {
-            Processor::<i32, CSR32> {
-                registers: register_state!($register_state)
-                $(, memory: memory_state!($memory_state))?
-                $(, csrs: csr_state!($csr))?
-                $(, pc: $program_counter1)?
-                , ..Default::default()
-            }
-        };
-        (
-            {
-                registers: $register_state:tt
-                $(, memory: $memory_state:tt)?
-                $(, csr: $csr:tt)?
-                $(, pc: $program_counter2:expr)?
-                $(,)?
-            }
-        ) => {
-            processor_state!(
-                registers: $register_state
-                $(, memory: $memory_state)?
-                $(, csr: $csr)?
-                $(, pc: $program_counter2)?
-            )
-        };
-    }
-    macro_rules! test_execute {
-        ($instruction:expr, changes: $initial_state:tt, to: $final_state:tt $(,)?) => {{
-            // Arrange
-            let mut processor = processor_state!($initial_state);
-
-            // Act
-            $instruction.execute(&mut processor).unwrap();
-
-            // Assert
-            let expected_state = processor_state!($final_state);
-            assert_eq!(processor, expected_state);
-            processor
-        }};
-    }
-    macro_rules! test_execute_many {
-        ($instructions:expr, changes: $initial_state:tt, to: $final_state:tt $(,)?) => {{
-            // Arrange
-            let mut processor = processor_state!($initial_state);
-
-            // Act
-            for instruction in $instructions {
-                instruction.execute(&mut processor).unwrap();
-            }
-
-            // Assert
-            let expected_state = processor_state!($final_state);
-            assert_eq!(processor, expected_state);
-            processor
-        }};
-    }
 
     #[test]
     fn execute_li() {
@@ -310,7 +206,7 @@ mod test {
             (i32::MAX, 8),
             (i32::MIN, 8),
         ] {
-            test_execute_many!(
+            test_execute!(
                 Instruction::LI(Register::T1, i),
                 changes: {registers: {}},
                 to: {registers: {t1: i}, pc: pc_inc},
@@ -320,17 +216,17 @@ mod test {
 
     #[test]
     fn execute_not() {
-        test_execute_many!(
+        test_execute!(
             Instruction::NOT(Register::A5, Register::A6),
             changes: {registers: {a6: -1}},
             to: {registers: {a5: 0, a6: -1}, pc: 4},
         );
-        test_execute_many!(
+        test_execute!(
             Instruction::NOT(Register::A5, Register::A6),
             changes: {registers: {a6: 0}},
             to: {registers: {a5: -1, a6: 0}, pc: 4},
         );
-        test_execute_many!(
+        test_execute!(
             Instruction::NOT(Register::A5, Register::A6),
             changes: {registers: {a6: 42}},
             to: {registers: {a5: -43, a6: 42}, pc: 4},
@@ -339,22 +235,22 @@ mod test {
 
     #[test]
     fn execute_neg() {
-        test_execute_many!(
+        test_execute!(
             Instruction::NEG(Register::S5, Register::S6),
             changes: {registers: {s6: -1}},
             to: {registers: {s5: 1, s6: -1}, pc: 4},
         );
-        test_execute_many!(
+        test_execute!(
             Instruction::NEG(Register::S5, Register::S6),
             changes: {registers: {s6: -1}},
             to: {registers: {s5: 1, s6: -1}, pc: 4},
         );
-        test_execute_many!(
+        test_execute!(
             Instruction::NEG(Register::S5, Register::S6),
             changes: {registers: {s6: 42}},
             to: {registers: {s5: -42, s6: 42}, pc: 4},
         );
-        test_execute_many!(
+        test_execute!(
             Instruction::NEG(Register::S5, Register::S6),
             changes: {registers: {s6: 0}},
             to: {registers: {s5: 0, s6: 0}, pc: 4},
@@ -363,7 +259,7 @@ mod test {
 
     #[test]
     fn execute_mov() {
-        test_execute_many!(
+        test_execute!(
             Instruction::MOV(Register::T5, Register::T6),
             changes: {registers: {t6: -1}},
             to: {registers: {t5: -1, t6: -1}, pc: 4},
@@ -372,17 +268,17 @@ mod test {
 
     #[test]
     fn execute_seqz() {
-        test_execute_many!(
+        test_execute!(
             Instruction::SEQZ(Register::A3, Register::A1),
             changes: {registers: {a1: -1}},
             to: {registers: {a1: -1, a3: 0}, pc: 4},
         );
-        test_execute_many!(
+        test_execute!(
             Instruction::SEQZ(Register::A3, Register::A1),
             changes: {registers: {a1: 0}},
             to: {registers: {a1: 0, a3: 1}, pc: 4},
         );
-        test_execute_many!(
+        test_execute!(
             Instruction::SEQZ(Register::A3, Register::A1),
             changes: {registers: {a1: 1}},
             to: {registers: {a1: 1, a3: 0}, pc: 4},
@@ -391,17 +287,17 @@ mod test {
 
     #[test]
     fn execute_snez() {
-        test_execute_many!(
+        test_execute!(
             Instruction::SNEZ(Register::A3, Register::A1),
             changes: {registers: {a1: -1}},
             to: {registers: {a1: -1, a3: 1}, pc: 4},
         );
-        test_execute_many!(
+        test_execute!(
             Instruction::SNEZ(Register::A3, Register::A1),
             changes: {registers: {a1: 0}},
             to: {registers: {a1: 0, a3: 0}, pc: 4},
         );
-        test_execute_many!(
+        test_execute!(
             Instruction::SNEZ(Register::A3, Register::A1),
             changes: {registers: {a1: 1}},
             to: {registers: {a1: 1, a3: 1}, pc: 4},
@@ -410,17 +306,17 @@ mod test {
 
     #[test]
     fn execute_sltz() {
-        test_execute_many!(
+        test_execute!(
             Instruction::SLTZ(Register::A3, Register::A1),
             changes: {registers: {a1: -1}},
             to: {registers: {a1: -1, a3: 1}, pc: 4},
         );
-        test_execute_many!(
+        test_execute!(
             Instruction::SLTZ(Register::A3, Register::A1),
             changes: {registers: {a1: 0}},
             to: {registers: {a1: 0, a3: 0}, pc: 4},
         );
-        test_execute_many!(
+        test_execute!(
             Instruction::SLTZ(Register::A3, Register::A1),
             changes: {registers: {a1: 1}},
             to: {registers: {a1: 1, a3: 0}, pc: 4},
@@ -429,17 +325,17 @@ mod test {
 
     #[test]
     fn execute_sgtz() {
-        test_execute_many!(
+        test_execute!(
             Instruction::SGLZ(Register::A3, Register::A1),
             changes: {registers: {a1: -1}},
             to: {registers: {a1: -1, a3: 0}, pc: 4},
         );
-        test_execute_many!(
+        test_execute!(
             Instruction::SGLZ(Register::A3, Register::A1),
             changes: {registers: {a1: 0}},
             to: {registers: {a1: 0, a3: 0}, pc: 4},
         );
-        test_execute_many!(
+        test_execute!(
             Instruction::SGLZ(Register::A3, Register::A1),
             changes: {registers: {a1: 1}},
             to: {registers: {a1: 1, a3: 1}, pc: 4},
@@ -448,7 +344,7 @@ mod test {
 
     #[test]
     fn execute_nop() {
-        test_execute_many!(
+        test_execute!(
             Instruction::NOP,
             changes: {registers: {}},
             to: {registers: {}, pc: 4},
@@ -1017,12 +913,12 @@ mod test {
 
     #[test]
     fn execute_csrr() {
-        test_execute_many!(
+        test_execute!(
             Instruction::CSRR(Register::S3, 42),
             changes: {registers: {s3: 0}},
             to: {registers: {s3: 0}, pc: 4},
         );
-        test_execute_many!(
+        test_execute!(
             Instruction::CSRR(Register::S6, 42),
             changes: {registers: {s6: 3}, csr: {42: 42}},
             to: {registers: {s6: 42}, csr: {42: 42}, pc: 4},
@@ -1031,12 +927,12 @@ mod test {
 
     #[test]
     fn execute_csrw() {
-        test_execute_many!(
+        test_execute!(
             Instruction::CSRW(Register::S3, 42),
             changes: {registers: {s3: 0}},
             to: {registers: {s3: 0}, pc: 4},
         );
-        test_execute_many!(
+        test_execute!(
             Instruction::CSRW(Register::S6, 42),
             changes: {registers: {s6: 3}, csr: {42: 42}},
             to: {registers: {s6: 3}, csr: {42: 3}, pc: 4},
@@ -1083,12 +979,12 @@ mod test {
 
     #[test]
     fn execute_csrs() {
-        test_execute_many!(
+        test_execute!(
             Instruction::CSRS(Register::S3, 42),
             changes: {registers: {s3: 0}},
             to: {registers: {s3: 0}, pc: 4},
         );
-        test_execute_many!(
+        test_execute!(
             Instruction::CSRS(Register::S7, 5),
             changes: {registers: {s7: 0b10010010}, csr: {5: 0b10000101}},
             to: {registers: {s7: 0b10010010}, csr: {5: 0b10010111}, pc: 4},
@@ -1097,12 +993,12 @@ mod test {
 
     #[test]
     fn execute_csrc() {
-        test_execute_many!(
+        test_execute!(
             Instruction::CSRC(Register::S3, 42),
             changes: {registers: {s3: 0}},
             to: {registers: {s3: 0}, pc: 4},
         );
-        test_execute_many!(
+        test_execute!(
             Instruction::CSRC(Register::SP, 5),
             changes: {registers: {sp: 0b10010010}, csr: {5: 0b10000101}},
             to: {registers: {sp: 0b10010010}, csr: {5: 0b00000101}, pc: 4},
@@ -1163,12 +1059,12 @@ mod test {
 
     #[test]
     fn execute_csrwi() {
-        test_execute_many!(
+        test_execute!(
             Instruction::CSRWI(42, 0),
             changes: {registers: {}},
             to: {registers: {}, pc: 4},
         );
-        test_execute_many!(
+        test_execute!(
             Instruction::CSRWI(42, 5),
             changes: {registers: {}, csr: {42: 42}},
             to: {registers: {}, csr: {42: 5}, pc: 4},
@@ -1177,12 +1073,12 @@ mod test {
 
     #[test]
     fn execute_csrsi() {
-        test_execute_many!(
+        test_execute!(
             Instruction::CSRSI(42, 0),
             changes: {registers: {}},
             to: {registers: {}, pc: 4},
         );
-        test_execute_many!(
+        test_execute!(
             Instruction::CSRSI(5, 0b10101),
             changes: {registers: {}, csr: {5: 0b10000101}},
             to: {registers: {}, csr: {5: 0b10010101}, pc: 4},
@@ -1191,12 +1087,12 @@ mod test {
 
     #[test]
     fn execute_csrci() {
-        test_execute_many!(
+        test_execute!(
             Instruction::CSRCI(42, 0),
             changes: {registers: {}},
             to: {registers: {}, pc: 4},
         );
-        test_execute_many!(
+        test_execute!(
             Instruction::CSRCI(5, 0b10011),
             changes: {registers: {}, csr: {5: 0b10000101}},
             to: {registers: {}, csr: {5: 0b10000100}, pc: 4},

@@ -50,6 +50,15 @@ impl Memory {
             self.data.resize(location + N, 0);
         }
     }
+
+    #[cfg(test)]
+    pub(crate) fn with_initial_state(&mut self, Self { mut data }: Self) {
+        std::mem::swap(&mut self.data, &mut data);
+
+        data.into_iter()
+            .enumerate()
+            .for_each(|(i, value)| self.store_byte(i, value as i8));
+    }
 }
 
 #[cfg(test)]
