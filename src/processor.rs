@@ -79,31 +79,45 @@ mod test {
 
     use super::*;
 
+    /// Macro for creating a programme from a mixture of instructions and
+    /// pseudoinstructions.
+    macro_rules! instructions {
+        ($($instruction:expr),* $(,)*) => {{
+            let mut vec = Vec::new();
+            $(vec.extend($instruction);)*
+            vec
+        }};
+    }
+
+    /// Used by the macro above to make it possible to include instruction and
+    /// pseudoinstructions together as if of the same time in the vec type syntax
+    impl IntoIterator for Instruction {
+        type Item = Self;
+
+        type IntoIter = std::iter::Once<Self::Item>;
+
+        fn into_iter(self) -> Self::IntoIter {
+            std::iter::once(self)
+        }
+    }
+
     #[test]
+    // TODO: create macro for making mini programme test like this (reuse the
+    // existing test macros and move somewhere common.
     fn simple_run() {
         // Arrange
-        let mut processor = Processor::<i32, CSR32>::default();
+        let instructions = instructions![
+            Instruction::LI(Register::A0, 21),
+            Instruction::LI(Register::A1, 21),
+            Instruction::ADD {
+                rd: Register::A2,
+                rs1: Register::A1,
+                rs2: Register::A0,
+            },
+        ];
 
-        processor.store_instructions(
-            0,
-            [
-                Instruction::ADDI {
-                    rd: Register::A0,
-                    rs1: Register::ZERO,
-                    imm: 21,
-                },
-                Instruction::ADDI {
-                    rd: Register::A1,
-                    rs1: Register::ZERO,
-                    imm: 21,
-                },
-                Instruction::ADD {
-                    rd: Register::A2,
-                    rs1: Register::A1,
-                    rs2: Register::A0,
-                },
-            ],
-        );
+        let mut processor = Processor::<i32, CSR32>::default();
+        processor.store_instructions(0, instructions);
 
         let initial_memory_state = processor.memory.clone();
 
