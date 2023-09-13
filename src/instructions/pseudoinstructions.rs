@@ -1,11 +1,21 @@
+//! RISC-V Pseudoinstruction
 use crate::{integer::i12, registers::Register};
 
 use super::{immu::ImmU, Instruction};
 
+/// An iterator of up to 3 instructions.
+///
+/// All pseudoinstructions desugar to a number of instructions.
+///
+/// This is encapsulated by this iterator.
 pub(crate) enum PseudoinstructionMappingIter {
+    /// The iterator which will yield three instructions.
     Three(Instruction, Instruction, Instruction),
+    /// The iterator which will yield two instructions.
     Two(Instruction, Instruction),
+    /// The iterator which will yield one instruction.
     One(Instruction),
+    /// The iterator which will yield no instructions.
     Zero,
 }
 
@@ -83,7 +93,7 @@ impl Instruction {
                 Instruction::ADDI {
                     rd,
                     rs1: rd,
-                    imm: sign_extend_i12(imm),
+                    imm: i12::sign_extend(imm),
                 },
             )
         }
@@ -330,20 +340,9 @@ impl Instruction {
     }
 }
 
-fn sign_extend_i12(value: i32) -> i16 {
-    if is_positive_i12(value) {
-        (value & 0x7FF) as i16
-    } else {
-        (value & 0xFFF | 0xF000) as i16
-    }
-}
-
-fn is_positive_i12(value: i32) -> bool {
-    value & 0b_1000_0000_0000 == 0
-}
-
+/// If the `i12` value is negative returns `1` otherwise returns `0`.
 fn with_signed_i12_adjustment(value: i32) -> i32 {
-    if is_positive_i12(value) {
+    if i12::is_positive(value) {
         0
     } else {
         1
@@ -354,24 +353,6 @@ fn with_signed_i12_adjustment(value: i32) -> i32 {
 mod test {
     use super::*;
     use pretty_assertions::assert_eq;
-
-    #[test]
-    fn sign_extend_i12_test() {
-        let neg_1 = 0b_1111_1111_1111 as i32;
-        let max_i12 = 0b_0111_1111_1111 as i32;
-        let min_i12 = 0b_1000_0000_0000 as i32;
-        assert_eq!(sign_extend_i12(neg_1), -1);
-        assert_eq!(sign_extend_i12(max_i12), i12::MAX);
-        assert_eq!(sign_extend_i12(min_i12), i12::MIN);
-    }
-
-    #[test]
-    fn is_positive_i12_test() {
-        let neg_1 = 0b_1111_1111_1111 as i32;
-        let max_i12 = 0b_0111_1111_1111 as i32;
-        assert!(!is_positive_i12(neg_1));
-        assert!(is_positive_i12(max_i12));
-    }
 
     #[test]
     fn iter_test() {

@@ -1,3 +1,9 @@
+//! Control status registers
+//!
+//! Control and status register (CSR) is a register that stores various
+//! information in CPU. RISC-V defines a separate address space of 4096 CSRs.
+//! The RISC-V specification only explicitly allocates a part of address space
+//! the rest is OS - implementations specific.
 use std::sync::atomic::{AtomicI32, AtomicI64, Ordering::SeqCst};
 
 /// According to the RISC-V specification, the number of control status registers.
@@ -5,6 +11,13 @@ const CSR_SIZE: usize = 4096;
 
 /// The control status registers.
 pub trait ControlStatusRegisters {
+    /// The type of the processor's registers.
+    ///
+    /// Usually, this one of the following
+    ///
+    /// * i32 (for RV32I or RV32E)
+    /// * i64 (for RV64I)
+    /// * i128 (for RV128I)
     type Register;
     /// Reads the value of the CSR.
     ///
@@ -43,6 +56,7 @@ pub trait ControlStatusRegisters {
 ///
 /// Additionally some registers are read only.
 pub struct CSR32 {
+    /// A boxed slice of the CSR registers.
     registers: Box<[AtomicI32]>,
 }
 
@@ -65,6 +79,7 @@ pub struct CSR32 {
 ///
 /// Additionally some registers are read only.
 pub struct CSR64 {
+    /// A boxed slice of the CSR registers.
     registers: Box<[AtomicI64]>,
 }
 

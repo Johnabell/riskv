@@ -1,9 +1,13 @@
+//! The processors registers.
+//!
+//! A RISC-V processor has 32 integer registers, referred to either as `x0-x31`
+//! or by their ABI name.
 use std::{
     fmt::Debug,
     ops::{Deref, DerefMut},
 };
 
-/// Struct representing the RISK-V Processor.
+/// Struct representing the RISK-V processor registers.
 ///
 /// The processor contains the following registers.
 ///
@@ -43,37 +47,228 @@ use std::{
 /// | 31 | -   | x31      | t6       | temporary register 6                 | caller   |
 #[derive(Default, PartialEq, Eq)]
 pub(super) struct Registers<T> {
+    /// The zero register.
+    ///
+    /// This register will always yield zero. Setting the destination register
+    /// of a specific instruction will discard the result.
+    ///
+    /// In particular instructions that usually trigger read read side effects
+    /// should not be triggered if their destination register is the zero register.
+    ///
+    /// Also referred to as `x0`.
     pub(super) zero: ZeroRegister<T>,
+
+    /// Return address register.
+    ///
+    /// Usually the value will be set by the caller.
+    ///
+    /// Also referred to as `x1`.
     pub(super) ra: T,
+
+    /// Stack pointer register
+    ///
+    /// Usually the value will be set by the callee.
+    ///
+    /// Also referred to as `x2`.
     pub(super) sp: T,
+
+    /// Global pointer register
+    ///
+    /// Also referred to as `x2`.
     pub(super) gp: T,
+
+    /// Thread pointer register
+    ///
+    /// Also referred to as `x2`.
     pub(super) tp: T,
+
+    /// Temporary register 0.
+    ///
+    /// Usually the value will be set by the caller.
+    ///
+    /// Also referred to as `x5`.
     pub(super) t0: T,
+
+    /// Temporary register 1.
+    ///
+    /// Usually the value will be set by the caller.
+    ///
+    /// Also referred to as `x6`.
     pub(super) t1: T,
+
+    /// Temporary register 2.
+    ///
+    /// Usually the value will be set by the caller.
+    ///
+    /// Also referred to as `x7`.
     pub(super) t2: T,
+
+    /// Saved register 0.
+    ///
+    /// Usually the value will be set by the callee.
+    ///
+    /// Also referred to as `x8`.
     pub(super) s0: T,
+
+    /// Saved register 1.
+    ///
+    /// Usually the value will be set by the callee.
+    ///
+    /// Also referred to as `x9`.
     pub(super) s1: T,
+
+    /// Function argument register 0.
+    ///
+    /// Usually the value will be set by the caller.
+    ///
+    /// Also referred to as `x10`.
     pub(super) a0: T,
+
+    /// Function argument register 1.
+    ///
+    /// Usually the value will be set by the caller.
+    ///
+    /// Also referred to as `x11`.
     pub(super) a1: T,
+
+    /// Function argument register 2.
+    ///
+    /// Usually the value will be set by the caller.
+    ///
+    /// Also referred to as `x12`.
     pub(super) a2: T,
+
+    /// Function argument register 3.
+    ///
+    /// Usually the value will be set by the caller.
+    ///
+    /// Also referred to as `x13`.
     pub(super) a3: T,
+
+    /// Function argument register 4.
+    ///
+    /// Usually the value will be set by the caller.
+    ///
+    /// Also referred to as `x14`.
     pub(super) a4: T,
+
+    /// Function argument register 5.
+    ///
+    /// Usually the value will be set by the caller.
+    ///
+    /// Also referred to as `x15`.
     pub(super) a5: T,
+
+    /// Function argument register 6.
+    ///
+    /// Usually the value will be set by the caller.
+    ///
+    /// Also referred to as `x16`.
     pub(super) a6: T,
+
+    /// Function argument register 7.
+    ///
+    /// Usually the value will be set by the caller.
+    ///
+    /// Also referred to as `x17`.
     pub(super) a7: T,
+
+    /// Saved register 2.
+    ///
+    /// Usually the value will be set by the callee.
+    ///
+    /// Also referred to as `x18`.
     pub(super) s2: T,
+
+    /// Saved register 3.
+    ///
+    /// Usually the value will be set by the callee.
+    ///
+    /// Also referred to as `x19`.
     pub(super) s3: T,
+
+    /// Saved register 4.
+    ///
+    /// Usually the value will be set by the callee.
+    ///
+    /// Also referred to as `x20`.
     pub(super) s4: T,
+
+    /// Saved register 5.
+    ///
+    /// Usually the value will be set by the callee.
+    ///
+    /// Also referred to as `x21`.
     pub(super) s5: T,
+
+    /// Saved register 6.
+    ///
+    /// Usually the value will be set by the callee.
+    ///
+    /// Also referred to as `x22`.
     pub(super) s6: T,
+
+    /// Saved register 7.
+    ///
+    /// Usually the value will be set by the callee.
+    ///
+    /// Also referred to as `x23`.
     pub(super) s7: T,
+
+    /// Saved register 8.
+    ///
+    /// Usually the value will be set by the callee.
+    ///
+    /// Also referred to as `x24`.
     pub(super) s8: T,
+
+    /// Saved register 9.
+    ///
+    /// Usually the value will be set by the callee.
+    ///
+    /// Also referred to as `x25`.
     pub(super) s9: T,
+
+    /// Saved register 10.
+    ///
+    /// Usually the value will be set by the callee.
+    ///
+    /// Also referred to as `x26`.
     pub(super) s10: T,
+
+    /// Saved register 11.
+    ///
+    /// Usually the value will be set by the callee.
+    ///
+    /// Also referred to as `x27`.
     pub(super) s11: T,
+
+    /// Temporary register 3.
+    ///
+    /// Usually the value will be set by the caller.
+    ///
+    /// Also referred to as `x28`.
     pub(super) t3: T,
+
+    /// Temporary register 4.
+    ///
+    /// Usually the value will be set by the caller.
+    ///
+    /// Also referred to as `x29`.
     pub(super) t4: T,
+
+    /// Temporary register 5.
+    ///
+    /// Usually the value will be set by the caller.
+    ///
+    /// Also referred to as `x30`.
     pub(super) t5: T,
+
+    /// Temporary register 6.
+    ///
+    /// Usually the value will be set by the caller.
+    ///
+    /// Also referred to as `x31`.
     pub(super) t6: T,
 }
 
@@ -93,11 +288,20 @@ where
     }
 }
 
+/// A struct encapsulated the behaviour of the zero register:
+/// - always yields zero when read
+/// - can be assigned to but this effectively discards the value
 #[derive(Default)]
 pub(super) struct ZeroRegister<T> {
+    /// This value will always be set to zero. Shared references are given to
+    /// this value.
     zero: T,
-    // Since zero is hard wired, we don't want to give out a mutable reference,
-    // this is a compromise until I think of a better way to do this.
+    /// Since the zero register is hard wired to zero and should always yeild
+    /// zero when read, we don't want to give out a mutable reference to it.
+    /// Therefore we give out a mutable reference to `_zero`, and each time we
+    /// ask for a mutable reference we reset this value to zero.
+    ///
+    /// Note: I'm not sure if there is a better way to do this currently.
     _zero: T,
 }
 
@@ -133,77 +337,247 @@ where
     }
 }
 
+/// A single processor register.
 #[repr(u8)]
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
 #[allow(clippy::upper_case_acronyms)]
 pub(super) enum Register {
-    /// hardwired zero
+    /// The zero register.
+    ///
+    /// This register will always yield zero. Setting the destination register
+    /// of a specific instruction will discard the result.
+    ///
+    /// In particular instructions that usually trigger read read side effects
+    /// should not be triggered if their destination register is the zero register.
+    ///
+    /// Also referred to as `x0`.
     ZERO = 0,
-    /// return address
+
+    /// Return address register.
+    ///
+    /// Usually the value will be set by the caller.
+    ///
+    /// Also referred to as `x1`.
     RA = 1,
-    /// stack pointer
+
+    /// Stack pointer register
+    ///
+    /// Usually the value will be set by the callee.
+    ///
+    /// Also referred to as `x2`.
     SP = 2,
-    /// global pointer
+
+    /// Global pointer register
+    ///
+    /// Also referred to as `x2`.
     GP = 3,
-    /// thread pointer
+
+    /// Thread pointer register
+    ///
+    /// Also referred to as `x2`.
     TP = 4,
-    /// temporary register 0
+
+    /// Temporary register 0.
+    ///
+    /// Usually the value will be set by the caller.
+    ///
+    /// Also referred to as `x5`.
     T0 = 5,
-    /// temporary register 1
+
+    /// Temporary register 1.
+    ///
+    /// Usually the value will be set by the caller.
+    ///
+    /// Also referred to as `x6`.
     T1 = 6,
-    /// temporary register 2
+
+    /// Temporary register 2.
+    ///
+    /// Usually the value will be set by the caller.
+    ///
+    /// Also referred to as `x7`.
     T2 = 7,
-    /// saved register 0 / frame pointer
+
+    /// Saved register 0 / frame pointer.
+    ///
+    /// Usually the value will be set by the callee.
+    ///
+    /// Also referred to as `x8`.
     S0 = 8,
-    /// saved register 1
+
+    /// Saved register 1.
+    ///
+    /// Usually the value will be set by the callee.
+    ///
+    /// Also referred to as `x9`.
     S1 = 9,
-    /// function argument 0 / return value 0
+
+    /// Function argument register 0 / return value 0
+    ///
+    /// Usually the value will be set by the caller.
+    ///
+    /// Also referred to as `x10`.
     A0 = 10,
-    /// function argument 1 / return value 1
+
+    /// Function argument register 1 / return value 1.
+    ///
+    /// Usually the value will be set by the caller.
+    ///
+    /// Also referred to as `x11`.
     A1 = 11,
-    /// function argument 2
+
+    /// Function argument register 2.
+    ///
+    /// Usually the value will be set by the caller.
+    ///
+    /// Also referred to as `x12`.
     A2 = 12,
-    /// function argument 3
+
+    /// Function argument register 3.
+    ///
+    /// Usually the value will be set by the caller.
+    ///
+    /// Also referred to as `x13`.
     A3 = 13,
-    /// function argument 4
+
+    /// Function argument register 4.
+    ///
+    /// Usually the value will be set by the caller.
+    ///
+    /// Also referred to as `x14`.
     A4 = 14,
-    /// function argument 5
+
+    /// Function argument register 5.
+    ///
+    /// Usually the value will be set by the caller.
+    ///
+    /// Also referred to as `x15`.
     A5 = 15,
-    /// function argument 6
+
+    /// Function argument register 6.
+    ///
+    /// Usually the value will be set by the caller.
+    ///
+    /// Also referred to as `x16`.
     A6 = 16,
-    /// function argument 7
+
+    /// Function argument register 7.
+    ///
+    /// Usually the value will be set by the caller.
+    ///
+    /// Also referred to as `x17`.
     A7 = 17,
-    /// saved register 2
+
+    /// Saved register 2.
+    ///
+    /// Usually the value will be set by the callee.
+    ///
+    /// Also referred to as `x18`.
     S2 = 18,
-    /// saved register 3
+
+    /// Saved register 3.
+    ///
+    /// Usually the value will be set by the callee.
+    ///
+    /// Also referred to as `x19`.
     S3 = 19,
-    /// saved register 4
+
+    /// Saved register 4.
+    ///
+    /// Usually the value will be set by the callee.
+    ///
+    /// Also referred to as `x20`.
     S4 = 20,
-    /// saved register 5
+
+    /// Saved register 5.
+    ///
+    /// Usually the value will be set by the callee.
+    ///
+    /// Also referred to as `x21`.
     S5 = 21,
-    /// saved register 6
+
+    /// Saved register 6.
+    ///
+    /// Usually the value will be set by the callee.
+    ///
+    /// Also referred to as `x22`.
     S6 = 22,
-    /// saved register 7
+
+    /// Saved register 7.
+    ///
+    /// Usually the value will be set by the callee.
+    ///
+    /// Also referred to as `x23`.
     S7 = 23,
-    /// saved register 8
+
+    /// Saved register 8.
+    ///
+    /// Usually the value will be set by the callee.
+    ///
+    /// Also referred to as `x24`.
     S8 = 24,
-    /// saved register 9
+
+    /// Saved register 9.
+    ///
+    /// Usually the value will be set by the callee.
+    ///
+    /// Also referred to as `x25`.
     S9 = 25,
-    /// saved register 10
+
+    /// Saved register 10.
+    ///
+    /// Usually the value will be set by the callee.
+    ///
+    /// Also referred to as `x26`.
     S10 = 26,
-    /// saved register 11
+
+    /// Saved register 11.
+    ///
+    /// Usually the value will be set by the callee.
+    ///
+    /// Also referred to as `x27`.
     S11 = 27,
-    /// temporary register 3
+
+    /// Temporary register 3.
+    ///
+    /// Usually the value will be set by the caller.
+    ///
+    /// Also referred to as `x28`.
     T3 = 28,
-    /// temporary register 4
+
+    /// Temporary register 4.
+    ///
+    /// Usually the value will be set by the caller.
+    ///
+    /// Also referred to as `x29`.
     T4 = 29,
-    /// temporary register 5
+
+    /// Temporary register 5.
+    ///
+    /// Usually the value will be set by the caller.
+    ///
+    /// Also referred to as `x30`.
     T5 = 30,
-    /// temporary register 6
+
+    /// Temporary register 6.
+    ///
+    /// Usually the value will be set by the caller.
+    ///
+    /// Also referred to as `x31`.
     T6 = 31,
 }
 
 impl Register {
+    /// Converts the [u8] into a [Register].
+    ///
+    /// The [u8] will be masked to ensure it always returns a valid register.
+    ///
+    /// # Example
+    ///
+    /// ```ignored
+    /// assert_eq!(Register::const_from(0), Register::ZERO);
+    /// assert_eq!(Register::const_from(32), Register::ZERO);
+    /// ```
     pub(crate) const fn const_from(value: u8) -> Register {
         match value & 0b_0001_1111 {
             0 => Register::ZERO,

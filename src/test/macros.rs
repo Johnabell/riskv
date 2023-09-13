@@ -1,3 +1,4 @@
+//! Macros to help write clean and concise tests without lots of boiler plate.
 use crate::instructions::Instruction;
 
 /// Used by the test macros to make it possible to treat instructions and

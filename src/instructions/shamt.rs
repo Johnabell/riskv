@@ -1,14 +1,25 @@
+//! A module including helpers for extracting the 5-bit (or 6-bit) shift amount
+//! out of an instruction.
+
+/// For extracting the 5-bit (or 6-bit) shift amount out of an instruction.
+///
+/// _Note_: On 64-bit architectures, bit 25 is part of the shift amount.
 pub(super) struct Shamt;
 
 impl Shamt {
+    /// The bit mask for extracting the relevant bits out of the instruction.
     const MASK: u32 = u32::from_le(0b_0000001_11111_00000_000_00000_0000000);
+    /// The right shift to apply to the instruction to after extracting the
+    /// relevant bits.
     const RSHIFT: usize = 20;
 
+    /// Decode the 5-bit (or 6-bit) shift amount from an instruction.
     #[inline]
     pub(super) const fn decode(value: u32) -> u8 {
         ((value & Self::MASK) >> Self::RSHIFT) as u8
     }
 
+    /// Encode the 5-bit (or 6-bit) shift amount to an instruction.
     #[inline]
     pub(super) const fn encode(value: u8) -> u32 {
         (value as u32) << Self::RSHIFT & Self::MASK

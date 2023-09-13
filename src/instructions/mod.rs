@@ -1,3 +1,10 @@
+//! Types representing RISC-V instructions.
+//!
+//! [Instruction] is primarily the definition of the RV32I instructions and
+//! [crate::instruction_set::InstructionSet] has been implemented for it.
+//!
+//! This module also contains a number of helpers for exacting the different part of
+//! an encoded instruction.
 #![allow(clippy::unusual_byte_groupings, clippy::upper_case_acronyms)]
 mod csr;
 mod csr_imm;
@@ -35,7 +42,12 @@ pub(super) enum Instruction {
     /// top 20 bits of the destination register rd, filling in the lowest 12 bits with zeros.
     ///
     /// `rd <- sext(immediate[31:12] << 12)`
-    LUI { rd: Register, imm: i32 },
+    LUI {
+        /// The destination register
+        rd: Register,
+        /// The 20-bit immediate value sign extended to an [i32].
+        imm: i32,
+    },
 
     /// # Add upper immediate to programme counter
     ///
@@ -44,7 +56,12 @@ pub(super) enum Instruction {
     /// pc, then places the result in register rd.
     ///
     /// `rd <- pc + sext(immediate[31:12] << 12)`
-    AUIPC { rd: Register, imm: i32 },
+    AUIPC {
+        /// The destination register
+        rd: Register,
+        /// The 20-bit immediate value sign extended to an [i32].
+        imm: i32,
+    },
 
     /// # Add Immediate
     ///
@@ -52,10 +69,13 @@ pub(super) enum Instruction {
     /// the result is simply the low XLEN bits of the result. ADDI rd, rs1, 0 is used to implement
     /// the MV rd, rs1 assembler pseudo-instruction.
     ///
-    /// `rd <- rs1 + rs2`
+    /// `rd <- rs1 + sext(immediate)`
     ADDI {
+        /// The destination register.
         rd: Register,
+        /// Source register 1.
         rs1: Register,
+        /// The 12-bit immediate value sign extended to an [i16].
         imm: i16,
     },
 
@@ -66,8 +86,11 @@ pub(super) enum Instruction {
     ///
     /// `rd <- rs1 <s sext(immediate)`
     SLTI {
+        /// The destination register
         rd: Register,
+        /// Source register 1.
         rs1: Register,
+        /// The 12-bit immediate value sign extended to an [i16].
         imm: i16,
     },
 
@@ -78,8 +101,11 @@ pub(super) enum Instruction {
     ///
     /// `rd <- rs1 <u sext(immediate)`
     SLTIU {
+        /// The destination register
         rd: Register,
+        /// Source register 1.
         rs1: Register,
+        /// The 12-bit immediate value sign extended to an [i16].
         imm: i16,
     },
 
@@ -93,8 +119,11 @@ pub(super) enum Instruction {
     ///
     /// `rd <- rs1 ^ sext(immediate)`
     XORI {
+        /// The destination register
         rd: Register,
+        /// Source register 1.
         rs1: Register,
+        /// The 12-bit immediate value sign extended to an [i16].
         imm: i16,
     },
 
@@ -104,8 +133,11 @@ pub(super) enum Instruction {
     ///
     /// `rd <- rs1 | sext(immediate)`
     ORI {
+        /// The destination register
         rd: Register,
+        /// Source register 1.
         rs1: Register,
+        /// The 12-bit immediate value sign extended to an [i16].
         imm: i16,
     },
 
@@ -116,8 +148,11 @@ pub(super) enum Instruction {
     ///
     /// `rd <- rs1 & sext(immediate)`
     ANDI {
+        /// The destination register
         rd: Register,
+        /// Source register 1.
         rs1: Register,
+        /// The 12-bit immediate value sign extended to an [i16].
         imm: i16,
     },
 
@@ -129,8 +164,13 @@ pub(super) enum Instruction {
     ///
     /// `rd <- rs1 << shamt`
     SLLI {
+        /// The destination register
         rd: Register,
+        /// Source register 1.
         rs1: Register,
+        /// The 5-bit (for 32-bit architecture) shift amount zero extened to a [u8].
+        ///
+        /// Note: on 64-bit this will be a 6-bit value.
         shamt: u8,
     },
 
@@ -142,8 +182,13 @@ pub(super) enum Instruction {
     ///
     /// `rd <- rs1 >>u shamt`
     SRLI {
+        /// The destination register
         rd: Register,
+        /// Source register 1.
         rs1: Register,
+        /// The 5-bit (for 32-bit architecture) shift amount zero extened to a [u8].
+        ///
+        /// Note: on 64-bit this will be a 6-bit value.
         shamt: u8,
     },
 
@@ -155,8 +200,13 @@ pub(super) enum Instruction {
     ///
     /// `rd <- rs1 >>s shamt`
     SRAI {
+        /// The destination register
         rd: Register,
+        /// Source register 1.
         rs1: Register,
+        /// The 5-bit (for 32-bit architecture) shift amount zero extened to a [u8].
+        ///
+        /// Note: on 64-bit this will be a 6-bit value.
         shamt: u8,
     },
 
@@ -168,8 +218,11 @@ pub(super) enum Instruction {
     ///
     /// `rd <- rs1 + rs2`
     ADD {
+        /// The destination register
         rd: Register,
+        /// Source register 1.
         rs1: Register,
+        /// Source register 2.
         rs2: Register,
     },
 
@@ -181,20 +234,26 @@ pub(super) enum Instruction {
     ///
     /// `rd <- rs1 - rs2`
     SUB {
+        /// The destination register
         rd: Register,
+        /// Source register 1.
         rs1: Register,
+        /// Source register 2.
         rs2: Register,
     },
 
     /// # Shift Left Logical
     ///
     /// Performs logical left shift on the value in register rs1 by the shift amount held in the
-    /// lower 5 bits (for 32-bit archeticture) or 6 bits (64-bit archetecture) of register rs2.
+    /// lower 5 bits (for 32-bit architecture) or 6 bits (64-bit archetecture) of register rs2.
     ///
     /// `rd = rs1 << rs2`
     SLL {
+        /// The destination register
         rd: Register,
+        /// Source register 1.
         rs1: Register,
+        /// Source register 2.
         rs2: Register,
     },
 
@@ -205,8 +264,11 @@ pub(super) enum Instruction {
     ///
     /// `rd <- rs1 <s rs2`
     SLT {
+        /// The destination register
         rd: Register,
+        /// Source register 1.
         rs1: Register,
+        /// Source register 2.
         rs2: Register,
     },
 
@@ -217,8 +279,11 @@ pub(super) enum Instruction {
     ///
     /// `rd <- rs1 <u rs2`
     SLTU {
+        /// The destination register
         rd: Register,
+        /// Source register 1.
         rs1: Register,
+        /// Source register 2.
         rs2: Register,
     },
 
@@ -228,32 +293,41 @@ pub(super) enum Instruction {
     ///
     /// `rd = rs1 ^ rs2`
     XOR {
+        /// The destination register
         rd: Register,
+        /// Source register 1.
         rs1: Register,
+        /// Source register 2.
         rs2: Register,
     },
 
     /// # Shift Right Logical
     ///
     /// Performs logical right shift on the value in register rs1 by the shift amount held in the
-    /// lower 5 bits (for 32-bit archeticture) or 6 bits (64-bit archetecture) of register rs2.
+    /// lower 5 bits (for 32-bit architecture) or 6 bits (64-bit archetecture) of register rs2.
     ///
     /// `rd = rs1 >> rs2`
     SRL {
+        /// The destination register
         rd: Register,
+        /// Source register 1.
         rs1: Register,
+        /// Source register 2.
         rs2: Register,
     },
 
     /// # Shift Right Arithmetic
     ///
     /// Performs arithmetic right shift on the value in register rs1 by the shift amount held in the
-    /// lower 5 bits (for 32-bit archeticture) or 6 bits (64-bit archetecture) of register rs2.
+    /// lower 5 bits (for 32-bit architecture) or 6 bits (64-bit archetecture) of register rs2.
     ///
     /// `rd = rs1 >>s rs2`
     SRA {
+        /// The destination register
         rd: Register,
+        /// Source register 1.
         rs1: Register,
+        /// Source register 2.
         rs2: Register,
     },
 
@@ -263,8 +337,11 @@ pub(super) enum Instruction {
     ///
     /// `rd = rs1 | rs2`
     OR {
+        /// The destination register
         rd: Register,
+        /// Source register 1.
         rs1: Register,
+        /// Source register 2.
         rs2: Register,
     },
 
@@ -274,8 +351,11 @@ pub(super) enum Instruction {
     ///
     /// `rd = rs1 & rs2`
     AND {
+        /// The destination register
         rd: Register,
+        /// Source register 1.
         rs1: Register,
+        /// Source register 2.
         rs2: Register,
     },
 
@@ -286,8 +366,11 @@ pub(super) enum Instruction {
     ///
     /// `rd <- sext(M[rs1 + sext(offset)][7:0])`
     LB {
+        /// The destination register
         rd: Register,
+        /// Source register 1.
         rs1: Register,
+        /// The 12-bit offset value sign-extended to an [i16].
         offset: i16,
     },
 
@@ -298,8 +381,11 @@ pub(super) enum Instruction {
     ///
     /// `rd <- sext(M[rs1 + sext(offset)][15:0])`
     LH {
+        /// The destination register
         rd: Register,
+        /// Source register 1.
         rs1: Register,
+        /// The 12-bit offset value sign-extended to an [i16].
         offset: i16,
     },
 
@@ -310,8 +396,11 @@ pub(super) enum Instruction {
     ///
     /// `rd <- sext(M[rs1 + sext(offset)][31:0])`
     LW {
+        /// The destination register
         rd: Register,
+        /// Source register 1.
         rs1: Register,
+        /// The 12-bit offset value sign-extended to an [i16].
         offset: i16,
     },
 
@@ -322,8 +411,11 @@ pub(super) enum Instruction {
     ///
     /// `rd <- M[rs1 + sext(offset)][7:0]`
     LBU {
+        /// The destination register
         rd: Register,
+        /// Source register 1.
         rs1: Register,
+        /// The 12-bit offset value sign-extended to an [i16].
         offset: i16,
     },
 
@@ -334,8 +426,11 @@ pub(super) enum Instruction {
     ///
     /// `rd <- M[rs1 + sext(offset)][15:0]`
     LHU {
+        /// The destination register
         rd: Register,
+        /// Source register 1.
         rs1: Register,
+        /// The 12-bit offset value sign-extended to an [i16].
         offset: i16,
     },
 
@@ -345,8 +440,11 @@ pub(super) enum Instruction {
     ///
     /// `M[rs1 + sext(offset)] = rs2[7:0]`
     SB {
+        /// Source register 1.
         rs1: Register,
+        /// Source register 2.
         rs2: Register,
+        /// The 12-bit offset value sign-extended to an [i16].
         offset: i16,
     },
 
@@ -356,8 +454,11 @@ pub(super) enum Instruction {
     ///
     /// `M[rs1 + sext(offset)] = rs2[15:0]`
     SH {
+        /// Source register 1.
         rs1: Register,
+        /// Source register 2.
         rs2: Register,
+        /// The 12-bit offset value sign-extended to an [i16].
         offset: i16,
     },
 
@@ -367,8 +468,11 @@ pub(super) enum Instruction {
     ///
     /// `M[rs1 + sext(offset)] = rs2[31:0]`
     SW {
+        /// Source register 1.
         rs1: Register,
+        /// Source register 2.
         rs2: Register,
+        /// The 12-bit offset value sign-extended to an [i16].
         offset: i16,
     },
 
@@ -383,8 +487,11 @@ pub(super) enum Instruction {
     ///
     /// `t = CSRs[csr]; CSRs[csr] = rs1; rd = t`
     CSRRW {
+        /// The destination register
         rd: Register,
+        /// Source register 1.
         rs1: Register,
+        /// The 12-bit csr address value zero-extended to an [u16].
         csr: u16,
     },
 
@@ -399,8 +506,11 @@ pub(super) enum Instruction {
     ///
     /// `t = CSRs[csr]; CSRs[csr] = t | rs1; rd = t`
     CSRRS {
+        /// The destination register
         rd: Register,
+        /// Source register 1.
         rs1: Register,
+        /// The 12-bit csr address value zero-extended to an [u16].
         csr: u16,
     },
 
@@ -415,8 +525,11 @@ pub(super) enum Instruction {
     ///
     /// `t = CSRs[csr]; CSRs[csr] = t & ∼rs1; rd = t`
     CSRRC {
+        /// The destination register
         rd: Register,
+        /// Source register 1.
         rs1: Register,
+        /// The 12-bit csr address value zero-extended to an [u16].
         csr: u16,
     },
 
@@ -426,7 +539,14 @@ pub(super) enum Instruction {
     /// 5-bit unsigned immediate (`uimm[4:0]`) field encoded in the rs1 field.
     ///
     /// `rd = CSRs[csr]; CSRs[csr] = zext(imm)`
-    CSRRWI { rd: Register, csr: u16, imm: u8 },
+    CSRRWI {
+        /// The destination register
+        rd: Register,
+        /// The 12-bit csr address value zero-extended to an [u16].
+        csr: u16,
+        /// The 5-bit immediate value zero-extended to a [u8].
+        imm: u8,
+    },
 
     /// # Atomic CSR read set immediate
     ///
@@ -434,7 +554,14 @@ pub(super) enum Instruction {
     /// unsigned immediate (`uimm[4:0]`) field encoded in the rs1 field.
     ///
     /// `t = CSRs[csr]; CSRs[csr] = t | zext(imm); rd = t`
-    CSRRSI { rd: Register, csr: u16, imm: u8 },
+    CSRRSI {
+        /// The destination register
+        rd: Register,
+        /// The 12-bit csr address value zero-extended to an [u16].
+        csr: u16,
+        /// The 5-bit immediate value zero-extended to a [u8].
+        imm: u8,
+    },
 
     /// # Atomic CSR read clear immediate
     ///
@@ -442,10 +569,22 @@ pub(super) enum Instruction {
     /// 5-bit unsigned immediate (`uimm[4:0]`) field encoded in the rs1 field.
     ///
     /// `t = CSRs[csr]; CSRs[csr] = t & ~zext(imm); rd = t`
-    CSRRCI { rd: Register, csr: u16, imm: u8 },
+    CSRRCI {
+        /// The destination register
+        rd: Register,
+        /// The 12-bit csr address value zero-extended to an [u16].
+        csr: u16,
+        /// The 5-bit immediate value zero-extended to a [u8].
+        imm: u8,
+    },
 }
 
 impl Instruction {
+    /// Decode a [u32] as an [Instruction].
+    ///
+    /// Instructions in RISC-V are encoded using little endian byte order.
+    /// Therefore, to avoid unexpected results, ensure the [u32] is little endian.
+    #[inline]
     const fn decode(value: u32) -> Result<Self, Exception> {
         let instruction = match Instruction::op_code(value) {
             0b_0110111 => Instruction::LUI {
@@ -644,6 +783,8 @@ impl Instruction {
         Ok(instruction)
     }
 
+    /// Encode an [Instruction] as a little endian [u32].
+    #[inline]
     pub(crate) const fn encode(self) -> u32 {
         match self {
             Instruction::LUI { rd, imm } => {
@@ -796,12 +937,14 @@ impl TryFrom<u32> for Instruction {
 }
 
 impl Instruction {
+    /// Extract the op code from the [u32].
     #[inline]
     const fn op_code(value: u32) -> u8 {
         (value & OPP_MASK) as u8
     }
 }
 
+/// The bit mask to extract the instructions op code from a [u32].
 const OPP_MASK: u32 = u32::from_le(0b_0000000_00000_00000_000_00000_1111111);
 
 #[cfg(test)]

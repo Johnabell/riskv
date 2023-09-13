@@ -1,22 +1,36 @@
+//! Core model of the central processing unit.
+//!
+//! The processor implements execution pipeline.
 use crate::csr::ControlStatusRegisters;
 use crate::instruction_set::{Exception, InstructionSet};
 use crate::integer::AsUsize;
 use crate::memory::Memory;
 use crate::registers::Registers;
 
+/// The RISC-V machines central processing unit.
+///
+/// To support different architectures the processor is generic over the
+/// register type and CSR type.
 #[derive(Debug, Default, PartialEq, Eq)]
 pub struct Processor<R, CSRs: ControlStatusRegisters<Register = R>> {
+    /// The processors registers.
     pub(crate) registers: Registers<R>,
-    // Programme Counter
+    /// Programme Counter
     pub(crate) pc: R,
+    /// The control status registers.
     pub(crate) csrs: CSRs,
+    /// The computer memory.
     pub(crate) memory: Memory,
+    // TODO add privilege modes
 }
 
 impl<R, CSRs: ControlStatusRegisters<Register = R>> Processor<R, CSRs>
 where
     R: AsUsize,
 {
+    /// Execute a single step of the processor pipeline:
+    /// `load instruction -> decode instruction -> execute instruction`
+    /// returning nothing or an exception if raised.
     #[inline]
     fn inner_step<I: InstructionSet<RegisterType = R, CSRType = CSRs>>(
         &mut self,
@@ -24,6 +38,7 @@ where
         I::decode(self.memory.load_word(self.pc.as_usize()) as u32)?.execute(self)
     }
 
+    /// Step the process one instruction forward handling any exception which might be raised.
     #[inline]
     pub fn step<I: InstructionSet<RegisterType = R, CSRType = CSRs>>(&mut self) -> ExecutionResult {
         match self.inner_step::<I>() {
@@ -32,10 +47,13 @@ where
         }
     }
 
+    /// Run the processor forward until the next [ExecutionResult::Halt].
     pub fn run<I: InstructionSet<RegisterType = R, CSRType = CSRs>>(&mut self) {
         while let ExecutionResult::Continue = self.step::<I>() {}
     }
 
+    /// Run the processor forward from the provided memory location until the
+    /// next [ExecutionResult::Halt].
     pub fn run_from<I: InstructionSet<RegisterType = R, CSRType = CSRs>>(
         &mut self,
         initial_mem_location: R,
@@ -44,12 +62,16 @@ where
         self.run::<I>()
     }
 
+    /// The processor exception handler.
+    ///
+    /// At some point this should jump execution to into a specified trap handler.
     #[inline]
     fn handle_exception(&self, _exception: Exception) -> ExecutionResult {
         // TODO handle other types of interrupts
-        ExecutionResult::Finished
+        ExecutionResult::Halt
     }
 
+    /// Store the `instructions` into memory starting from the `initial_memory_location`.
     pub fn store_instructions<I: InstructionSet<RegisterType = R, CSRType = CSRs>>(
         &mut self,
         initial_mem_location: usize,
@@ -67,9 +89,12 @@ where
     }
 }
 
+/// The result of executing an execution.
 pub enum ExecutionResult {
+    /// Execution should continue to the next instruction.
     Continue,
-    Finished,
+    /// Execution should halt and yield control to the caller.
+    Halt,
 }
 
 #[cfg(test)]
