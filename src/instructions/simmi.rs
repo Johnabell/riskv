@@ -24,7 +24,7 @@ impl SImmI {
             + (((value & Self::L_MASK) as i32) >> Self::L_RSHIFT)) as i16
     }
 
-    /// Encdoe the 12-bit immediate value into an `S`-type instruction.
+    /// Encode the 12-bit immediate value into an `S`-type instruction.
     #[inline]
     pub(super) const fn encode(value: i16) -> u32 {
         let trunk = (value & i12::MASK) as u32;
