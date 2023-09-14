@@ -27,6 +27,18 @@ pub(crate) mod i12 {
     }
 }
 
+/// The 21-bit signed integer type.
+pub(crate) mod i21 {
+    /// The largest value that can be represented by this integer type
+    /// (2<sup>20</sup> &minus; 1).
+    pub const MAX: i32 = 1048575;
+    /// The smallest value that can be represented by this integer type
+    /// (&minus;2<sup>20</sup>).
+    pub const MIN: i32 = -1048576;
+    /// The mask to extract an `i21` from a 16-bit integer type.
+    pub const MASK: i32 = 0b_0000_0000_0001_1111_1111_1111_1111_1111;
+}
+
 /// Conversion from a signed to an unsigned type.
 pub(crate) trait AsUnsigned<N> {
     /// Convert this to its associated unsigned type.

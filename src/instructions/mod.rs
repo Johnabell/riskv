@@ -14,6 +14,7 @@ mod funct7;
 mod immi;
 mod immu;
 mod impl_instruction_set;
+mod jimm;
 mod pseudoinstructions;
 mod rd;
 mod rs1;
