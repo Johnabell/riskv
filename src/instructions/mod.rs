@@ -584,6 +584,10 @@ pub(super) enum Instruction {
     /// Jump to address and place return address in rd.
     ///
     /// `rd = pc + 4; pc += sext(offset)`
+    ///
+    /// _Note_: The JAL and JALR instructions will generate a misaligned
+    /// instruction fetch exception if the target address is not aligned to a
+    /// four-byte boundary.
     JAL {
         /// The destination register for the return address.
         ///
@@ -606,6 +610,46 @@ pub(super) enum Instruction {
         /// _Note_: This allows addressing on `2`-byte boundaries since as the
         /// least significant bit is always zero.
         offset: i32,
+    },
+
+    /// # Jump and link register
+    ///
+    /// Jump to address and place return address in rd.
+    ///
+    /// `t = pc + 4; pc = (rs1+sext(offset)) & ~1; rd = t`
+    ///
+    /// _Note_: The JAL and JALR instructions will generate a misaligned
+    /// instruction fetch exception if the target address is not aligned to a
+    /// four-byte boundary.
+    JALR {
+        /// The destination register for the return address.
+        ///
+        /// The `RA` (`x1`) register is the usual return address register.
+        /// However, `T0` (`x5`) can also be used as the alternative link
+        /// register.
+        ///
+        /// The alternate link register supports calling millicode routines
+        /// (e.g., those to save and restore registers in compressed code)
+        /// while preserving the regular return address register. The register
+        /// `T0` (`x5`) was chosen as the alternate link register as it maps to
+        /// a temporary in the standard calling convention, and has an encoding
+        /// that is only one bit different than the regular link register.
+        ///
+        /// Unconditional jumps set this to the `ZERO` (`x0`) register.
+        rd: Register,
+
+        /// The source register.
+        ///
+        /// The target address is obtained by adding the `12`-bit signed
+        /// `I`-immediate to the register `rs1`, then setting the
+        /// least-significant bit of the result to zero.
+        rs1: Register,
+        /// The `12`-bit sign-extended offset.
+        ///
+        /// The target address is obtained by adding the `12`-bit signed
+        /// `I`-immediate to the register `rs1`, then setting the
+        /// least-significant bit of the result to zero.
+        offset: i16,
     },
 }
 
@@ -812,6 +856,14 @@ impl Instruction {
                 rd: Rd::decode(value),
                 offset: JImm::decode(value),
             },
+            0b_1100111 => match Funct3::decode(value) {
+                0b_000 => Instruction::JALR {
+                    rd: Rd::decode(value),
+                    rs1: Rs1::decode(value),
+                    offset: ImmI::decode(value),
+                },
+                _ => return Err(Exception::UnimplementedInstruction(value)),
+            },
             _ => return Err(Exception::UnimplementedInstruction(value)),
         };
         Ok(instruction)
@@ -962,6 +1014,10 @@ impl Instruction {
             Instruction::JAL { rd, offset } => {
                 u32::from_le(0b_0000000_00000_00000_000_00000_1101111)
                     + types::J::encode(rd, offset)
+            }
+            Instruction::JALR { rd, rs1, offset } => {
+                u32::from_le(0b_0000000_00000_00000_000_00000_1100111)
+                    + types::I::encode(rd, rs1, offset)
             }
         }
     }
@@ -1879,7 +1935,7 @@ mod test {
     }
 
     #[test]
-    fn decode_jal() {
+    fn encode_jal() {
         assert_eq!(
             Instruction::JAL {
                 rd: Register::T0,
@@ -1887,6 +1943,31 @@ mod test {
             }
             .encode(),
             u32::from_le(0b_0000001_01011_00000_000_00101_1101111),
+        );
+    }
+
+    #[test]
+    fn jalr_from_u32() {
+        assert_eq!(
+            Instruction::from(u32::from_le(0b_0000001_01010_01000_000_00001_1100111)),
+            Instruction::JALR {
+                rd: Register::RA,
+                rs1: Register::FP,
+                offset: 42,
+            }
+        );
+    }
+
+    #[test]
+    fn encode_jalr() {
+        assert_eq!(
+            Instruction::JALR {
+                rd: Register::T0,
+                rs1: Register::A0,
+                offset: 554,
+            }
+            .encode(),
+            u32::from_le(0b_0010001_01010_01010_000_00101_1100111),
         );
     }
 }

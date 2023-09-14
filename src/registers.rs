@@ -568,6 +568,10 @@ pub(super) enum Register {
 }
 
 impl Register {
+    /// Frame pointer register.
+    ///
+    /// Actually an alias to register `S0`.
+    pub(super) const FP: Self = Self::S0;
     /// Converts the [u8] into a [Register].
     ///
     /// The [u8] will be masked to ensure it always returns a valid register.

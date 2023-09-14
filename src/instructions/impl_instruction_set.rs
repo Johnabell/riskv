@@ -187,8 +187,20 @@ impl InstructionSet for Instruction {
                 processor.registers[rs2],
             ),
             Instruction::JAL { rd, offset } => {
+                let jump = processor.pc + offset;
+                if jump % 4 != 0 {
+                    return Err(Exception::MisalignedInstructionFetch);
+                }
                 processor.registers[rd] = pc;
-                pc = processor.pc + offset;
+                pc = jump;
+            }
+            Instruction::JALR { rd, rs1, offset } => {
+                let jump = (processor.registers[rs1] + offset as i32) & !1;
+                if jump % 4 != 0 {
+                    return Err(Exception::MisalignedInstructionFetch);
+                }
+                processor.registers[rd] = pc;
+                pc = jump;
             }
         }
         processor.pc = pc;
@@ -1125,6 +1137,11 @@ mod test {
             changes: {registers: {}, pc: 40000},
             to: {registers: {t0: 40004}, pc: 25000 },
         );
+        test_execute!(
+            Instruction::JAL { rd: Register::RA, offset: -42 },
+            executed_on: {registers: {}, pc: 84},
+            throws: Exception::MisalignedInstructionFetch,
+        );
     }
 
     #[test]
@@ -1141,8 +1158,13 @@ mod test {
         );
         test_execute!(
             Instruction::JAL(-42),
-            changes: {registers: {}, pc: 84},
-            to: {registers: {ra: 88}, pc: 42 },
+            changes: {registers: {}, pc: 82},
+            to: {registers: {ra: 86}, pc: 40 },
+        );
+        test_execute!(
+            Instruction::JAL(-42),
+            executed_on: {registers: {}, pc: 84},
+            throws: Exception::MisalignedInstructionFetch,
         );
     }
 
@@ -1160,8 +1182,42 @@ mod test {
         );
         test_execute!(
             Instruction::J(-42),
-            changes: {registers: {}, pc: 84},
-            to: {registers: {}, pc: 42 },
+            changes: {registers: {}, pc: 82},
+            to: {registers: {}, pc: 40 },
+        );
+        test_execute!(
+            Instruction::J(-42),
+            executed_on: {registers: {}, pc: 84},
+            throws: Exception::MisalignedInstructionFetch,
+        );
+    }
+
+    #[test]
+    fn execute_jalr() {
+        test_execute!(
+            Instruction::JALR { rd: Register::RA, rs1: Register::ZERO, offset: 84 },
+            changes: {registers: {}},
+            to: {registers: {ra: 4}, pc: 84},
+        );
+        test_execute!(
+            Instruction::JALR { rd: Register::ZERO, rs1: Register::A0, offset: 5000 },
+            changes: {registers: {a0: 5000}, pc: 5000},
+            to: {registers: {a0: 5000}, pc: 10000 },
+        );
+        test_execute!(
+            Instruction::JALR { rd: Register::ZERO, rs1: Register::A0, offset: 5000 },
+            changes: {registers: {a0: 5005}, pc: 5000},
+            to: {registers: {a0: 5005}, pc: 10004 },
+        );
+        test_execute!(
+            Instruction::JALR { rd: Register::T0, rs1: Register::T1, offset: -15000 },
+            changes: {registers: {t1: 40000}, pc: 4},
+            to: {registers: {t0: 8, t1: 40000}, pc: 25000 },
+        );
+        test_execute!(
+            Instruction::JALR { rd: Register::RA, rs1: Register::S3, offset: -42 },
+            executed_on: {registers: {s3: 84}, pc: 84},
+            throws: Exception::MisalignedInstructionFetch,
         );
     }
 }

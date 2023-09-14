@@ -18,10 +18,17 @@ use crate::{csr::ControlStatusRegisters, processor::Processor};
 ///
 /// Different instructions can raise exceptions in the processor for system
 /// interrupt.
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq)]
 pub enum Exception {
     /// The processor exception raised when an instruction is not recognised.
     UnimplementedInstruction(u32),
+
+    /// Misaligned Instruction Fetch exception.
+    ///
+    /// _Note_: Instruction fetch misaligned exceptions are not possible on
+    /// machines that support extensions with `16`-bit aligned instructions,
+    /// such as the compressed instruction set extension, C.
+    MisalignedInstructionFetch,
 }
 
 impl Display for Exception {
@@ -31,6 +38,9 @@ impl Display for Exception {
                 "The given instruction is not yet implemented {:#034b}",
                 instuction.to_le()
             )),
+            Self::MisalignedInstructionFetch => {
+                f.write_str("Attempted to fetch an instruction not aligned to a 32-bit boundary")
+            }
         }
     }
 }
