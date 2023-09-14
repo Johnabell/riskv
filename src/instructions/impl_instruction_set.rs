@@ -31,7 +31,7 @@ impl InstructionSet for Instruction {
     ) -> Result<(), Exception> {
         // By default, after this instruction, we will move to the next one. Instructions that do
         // something different e.g. JAL can set this variable to modify the pc.
-        let pc = processor.pc + 4;
+        let mut pc = processor.pc + 4;
 
         match self {
             Instruction::LUI { rd, imm } => processor.registers[rd] = imm << 12,
@@ -186,6 +186,10 @@ impl InstructionSet for Instruction {
                     .as_unsigned() as usize,
                 processor.registers[rs2],
             ),
+            Instruction::JAL { rd, offset } => {
+                processor.registers[rd] = pc;
+                pc = processor.pc + offset;
+            }
         }
         processor.pc = pc;
         Ok(())
@@ -1101,6 +1105,25 @@ mod test {
             Instruction::CSRCI(5, 0b10011),
             changes: {registers: {}, csr: {5: 0b10000101}},
             to: {registers: {}, csr: {5: 0b10000100}, pc: 4},
+        );
+    }
+
+    #[test]
+    fn execute_jal() {
+        test_execute!(
+            Instruction::JAL { rd: Register::RA, offset: 84 },
+            changes: {registers: {}},
+            to: {registers: {ra: 4}, pc: 84},
+        );
+        test_execute!(
+            Instruction::JAL { rd: Register::ZERO, offset: 5000 },
+            changes: {registers: {}, pc: 5000},
+            to: {registers: {}, pc: 10000 },
+        );
+        test_execute!(
+            Instruction::JAL { rd: Register::T0, offset: -15000 },
+            changes: {registers: {}, pc: 40000},
+            to: {registers: {t0: 40004}, pc: 25000 },
         );
     }
 }
