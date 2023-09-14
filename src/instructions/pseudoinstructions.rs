@@ -338,6 +338,36 @@ impl Instruction {
             csr,
         })
     }
+
+    /// # Jump and link
+    ///
+    /// Jump and link using the default return address register.
+    ///
+    /// Note: This pseudoinstruction desugars to `JAL x1, offset`
+    /// See
+    /// [ref](https://github.com/riscv-non-isa/riscv-asm-manual/blob/master/riscv-asm.md#-a-listing-of-standard-risc-v-pseudoinstructions)
+    #[allow(non_snake_case)]
+    pub(crate) fn JAL(offset: i32) -> PseudoinstructionMappingIter {
+        PseudoinstructionMappingIter::One(Instruction::JAL {
+            rd: Register::RA,
+            offset,
+        })
+    }
+
+    /// # Unconditional Jump
+    ///
+    /// Jump to the relative offset without linking the return address
+    ///
+    /// Note: This pseudoinstruction desugars to `JAL x0, offset`
+    /// See
+    /// [ref](https://github.com/riscv-non-isa/riscv-asm-manual/blob/master/riscv-asm.md#-a-listing-of-standard-risc-v-pseudoinstructions)
+    #[allow(non_snake_case)]
+    pub(crate) fn J(offset: i32) -> PseudoinstructionMappingIter {
+        PseudoinstructionMappingIter::One(Instruction::JAL {
+            rd: Register::ZERO,
+            offset,
+        })
+    }
 }
 
 /// If the `i12` value is negative returns `1` otherwise returns `0`.

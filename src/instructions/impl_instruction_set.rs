@@ -1126,4 +1126,42 @@ mod test {
             to: {registers: {t0: 40004}, pc: 25000 },
         );
     }
+
+    #[test]
+    fn execute_jal_pseudoinstruction() {
+        test_execute!(
+            Instruction::JAL(84),
+            changes: {registers: {}},
+            to: {registers: {ra: 4}, pc: 84},
+        );
+        test_execute!(
+            Instruction::JAL(1000),
+            changes: {registers: {}, pc: 5000},
+            to: {registers: {ra: 5004}, pc: 6000 },
+        );
+        test_execute!(
+            Instruction::JAL(-42),
+            changes: {registers: {}, pc: 84},
+            to: {registers: {ra: 88}, pc: 42 },
+        );
+    }
+
+    #[test]
+    fn execute_j() {
+        test_execute!(
+            Instruction::J(84),
+            changes: {registers: {}},
+            to: {registers: {}, pc: 84},
+        );
+        test_execute!(
+            Instruction::J(1000),
+            changes: {registers: {}, pc: 5000},
+            to: {registers: {}, pc: 6000 },
+        );
+        test_execute!(
+            Instruction::J(-42),
+            changes: {registers: {}, pc: 84},
+            to: {registers: {}, pc: 42 },
+        );
+    }
 }
