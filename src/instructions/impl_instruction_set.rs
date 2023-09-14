@@ -1220,4 +1220,18 @@ mod test {
             throws: Exception::MisalignedInstructionFetch,
         );
     }
+
+    #[test]
+    fn execute_jalr_psuedoinstruction() {
+        test_execute!(
+            Instruction::JALR(Register::A0),
+            executed_on: {registers: {a0: 5000}, pc: 1000},
+            results_in: {registers: {ra: 1004, a0: 5000}, pc: 5000 },
+        );
+        test_execute!(
+            Instruction::JALR(Register::S3),
+            executed_on: {registers: {s3: 42}, pc: 84},
+            throws: Exception::MisalignedInstructionFetch,
+        );
+    }
 }

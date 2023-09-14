@@ -368,6 +368,22 @@ impl Instruction {
             offset,
         })
     }
+
+    /// # Jump and link register
+    ///
+    /// Jump and link using the default return address register.
+    ///
+    /// Note: This pseudoinstruction desugars to `JALR x1, rs, 0`
+    /// See
+    /// [ref](https://github.com/riscv-non-isa/riscv-asm-manual/blob/master/riscv-asm.md#-a-listing-of-standard-risc-v-pseudoinstructions)
+    #[allow(non_snake_case)]
+    pub(crate) fn JALR(rs: Register) -> PseudoinstructionMappingIter {
+        PseudoinstructionMappingIter::One(Instruction::JALR {
+            rd: Register::RA,
+            rs1: rs,
+            offset: 0,
+        })
+    }
 }
 
 /// If the `i12` value is negative returns `1` otherwise returns `0`.
