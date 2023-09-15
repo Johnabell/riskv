@@ -182,6 +182,18 @@ macro_rules! test_execute {
         assert_eq!(result, Err($exception));
         assert_eq!(processor, processor_state!($initial_state));
     }};
+    ($instruction:expr, executed_on: $initial_state:tt, throws: $exception:expr, with_final_state: $final_state:tt $(,)?) => {{
+        // Arrange
+        let mut processor = processor_state!($initial_state);
+
+        // Act
+        let result = $instruction
+            .into_iter()
+            .try_for_each(|instruction| instruction.execute(&mut processor));
+
+        assert_eq!(result, Err($exception));
+        assert_eq!(processor, processor_state!($final_state));
+    }};
 }
 
 /// Macro for creating a vec of instructions from a mixture of instructions and

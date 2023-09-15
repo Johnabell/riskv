@@ -414,6 +414,28 @@ impl Instruction {
             rs1: Register::RA,
             offset: 0,
         });
+
+    /// # Call far away subroutine
+    ///
+    /// Jump to the relative offset without linking the return address
+    ///
+    /// Note: This pseudoinstruction desugars to `AUIPC x1, imm[31:12]; JALR x1, x1, imm[11:0]`
+    /// See
+    /// [ref](https://github.com/riscv-non-isa/riscv-asm-manual/blob/master/riscv-asm.md#-a-listing-of-standard-risc-v-pseudoinstructions)
+    #[allow(non_snake_case)]
+    pub(crate) fn CALL(address: i32) -> PseudoinstructionMappingIter {
+        PseudoinstructionMappingIter::Two(
+            Instruction::AUIPC {
+                rd: Register::RA,
+                imm: (address >> ImmU::RSHIFT),
+            },
+            Instruction::JALR {
+                rd: Register::RA,
+                rs1: Register::RA,
+                offset: (address as i16) & i12::MASK,
+            },
+        )
+    }
 }
 
 /// If the `i12` value is negative returns `1` otherwise returns `0`.

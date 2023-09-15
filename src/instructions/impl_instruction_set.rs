@@ -1262,4 +1262,19 @@ mod test {
             throws: Exception::MisalignedInstructionFetch,
         );
     }
+
+    #[test]
+    fn execute_call() {
+        test_execute!(
+            Instruction::CALL(50_000_000),
+            executed_on: {registers: {}, pc: 1000},
+            results_in: {registers: {ra: 1008}, pc: 50_001_000 },
+        );
+        test_execute!(
+            Instruction::CALL(50_000_003),
+            executed_on: {registers: {}, pc: 84},
+            throws: Exception::MisalignedInstructionFetch,
+            with_final_state: {registers: {ra: 49999956}, pc: 88},
+        );
+    }
 }
