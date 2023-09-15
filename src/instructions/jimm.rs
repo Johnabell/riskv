@@ -89,10 +89,6 @@ mod test {
     #[test]
     fn encode() {
         let instruction = u32::from_le(0b_0110110_10101_10110_011_00000_0000000);
-        println!(
-            "{:#034b}",
-            JImm::encode(i32::from_le(0b_0000000_00000_10110_011_1110110_10100))
-        );
         assert_eq!(
             JImm::encode(i32::from_le(0b_0000000_00000_10110_011_1110110_10100)),
             instruction

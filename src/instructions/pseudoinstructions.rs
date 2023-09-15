@@ -436,6 +436,28 @@ impl Instruction {
             },
         )
     }
+
+    /// # Tail call far away subroutine
+    ///
+    /// Jump to the address and tail call the subroutine.
+    ///
+    /// Note: This pseudoinstruction desugars to `AUIPC x6, imm[31:12]; JALR x0, x6, imm[11:0]`
+    /// See
+    /// [ref](https://github.com/riscv-non-isa/riscv-asm-manual/blob/master/riscv-asm.md#-a-listing-of-standard-risc-v-pseudoinstructions)
+    #[allow(non_snake_case)]
+    pub(crate) fn TAIL(address: i32) -> PseudoinstructionMappingIter {
+        PseudoinstructionMappingIter::Two(
+            Instruction::AUIPC {
+                rd: Register::T1,
+                imm: (address >> ImmU::RSHIFT),
+            },
+            Instruction::JALR {
+                rd: Register::ZERO,
+                rs1: Register::T1,
+                offset: (address as i16) & i12::MASK,
+            },
+        )
+    }
 }
 
 /// If the `i12` value is negative returns `1` otherwise returns `0`.

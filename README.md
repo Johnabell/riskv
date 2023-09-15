@@ -54,7 +54,7 @@ Feel free to contribute and get involved if you would like to learn more about a
   - [X] SH
   - [X] SW
   - [x] JAL
-  - [ ] JALR
+  - [x] JALR
   - [ ] BEQ
   - [ ] BNE
   - [ ] BLT
