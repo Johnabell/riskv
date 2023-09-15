@@ -1248,4 +1248,18 @@ mod test {
             throws: Exception::MisalignedInstructionFetch,
         );
     }
+
+    #[test]
+    fn execute_ret() {
+        test_execute!(
+            Instruction::RET,
+            executed_on: {registers: {ra: 5000}, pc: 1000},
+            results_in: {registers: {ra: 5000}, pc: 5000 },
+        );
+        test_execute!(
+            Instruction::RET,
+            executed_on: {registers: {ra: 42}, pc: 84},
+            throws: Exception::MisalignedInstructionFetch,
+        );
+    }
 }

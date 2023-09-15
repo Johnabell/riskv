@@ -400,6 +400,20 @@ impl Instruction {
             offset: 0,
         })
     }
+
+    /// # Return
+    ///
+    /// Return from a call to a subroutine.
+    ///
+    /// Note: This pseudoinstruction desugars to `JALR x0, x1, 0`
+    /// See
+    /// [ref](https://github.com/riscv-non-isa/riscv-asm-manual/blob/master/riscv-asm.md#-a-listing-of-standard-risc-v-pseudoinstructions)
+    pub(crate) const RET: PseudoinstructionMappingIter =
+        PseudoinstructionMappingIter::One(Instruction::JALR {
+            rd: Register::ZERO,
+            rs1: Register::RA,
+            offset: 0,
+        });
 }
 
 /// If the `i12` value is negative returns `1` otherwise returns `0`.
