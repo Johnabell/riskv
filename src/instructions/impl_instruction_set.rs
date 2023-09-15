@@ -1234,4 +1234,18 @@ mod test {
             throws: Exception::MisalignedInstructionFetch,
         );
     }
+
+    #[test]
+    fn execute_jr() {
+        test_execute!(
+            Instruction::JR(Register::A0),
+            executed_on: {registers: {a0: 5000}, pc: 1000},
+            results_in: {registers: {a0: 5000}, pc: 5000 },
+        );
+        test_execute!(
+            Instruction::JR(Register::S3),
+            executed_on: {registers: {s3: 42}, pc: 84},
+            throws: Exception::MisalignedInstructionFetch,
+        );
+    }
 }
