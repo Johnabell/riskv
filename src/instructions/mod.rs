@@ -6,6 +6,7 @@
 //! This module also contains a number of helpers for exacting the different part of
 //! an encoded instruction.
 #![allow(clippy::unusual_byte_groupings, clippy::upper_case_acronyms)]
+mod bimm;
 mod csr;
 mod csr_imm;
 mod funct3;
