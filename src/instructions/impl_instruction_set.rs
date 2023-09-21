@@ -202,6 +202,14 @@ impl InstructionSet for Instruction {
                 processor.registers[rd] = pc;
                 pc = jump;
             }
+            Instruction::BEQ { rs1, rs2, offset } => {
+                if processor.registers[rs1] == processor.registers[rs2] {
+                    if offset % 4 != 0 {
+                        return Err(Exception::MisalignedInstructionFetch);
+                    }
+                    pc = processor.pc + offset as i32;
+                }
+            }
         }
         processor.pc = pc;
         Ok(())
@@ -1290,6 +1298,30 @@ mod test {
             executed_on: {registers: {}, pc: 84},
             throws: Exception::MisalignedInstructionFetch,
             with_final_state: {registers: {t1: 49999956}, pc: 88},
+        );
+    }
+
+    #[test]
+    fn execute_beq() {
+        test_execute!(
+            Instruction::BEQ { rs1: Register::RA, rs2: Register::S3, offset: -44 },
+            executed_on: {registers: {}, pc: 1000},
+            results_in: {registers: {}, pc: 956 },
+        );
+        test_execute!(
+            Instruction::BEQ { rs1: Register::RA, rs2: Register::S3, offset: -42 },
+            executed_on: {registers: {ra: 1}, pc: 1000},
+            results_in: {registers: {ra: 1}, pc: 1004 },
+        );
+        test_execute!(
+            Instruction::BEQ { rs1: Register::RA, rs2: Register::S3, offset: -42 },
+            executed_on: {registers: {ra: 42, s3: 42}, pc: 52},
+            throws: Exception::MisalignedInstructionFetch
+        );
+        test_execute!(
+            Instruction::BEQ { rs1: Register::RA, rs2: Register::S3, offset: -44 },
+            executed_on: {registers: {ra: 42, s3: 42}, pc: 52},
+            results_in: {registers: {ra: 42, s3: 42}, pc: 8 },
         );
     }
 }

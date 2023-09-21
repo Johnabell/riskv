@@ -25,8 +25,8 @@ mod simmi;
 mod types;
 
 use self::{
-    csr::Csr, csr_imm::CsrImm, funct3::Funct3, funct6::Funct6, funct7::Funct7, immi::ImmI,
-    immu::ImmU, jimm::JImm, rd::Rd, rs1::Rs1, rs2::Rs2, shamt::Shamt, simmi::SImmI,
+    bimm::BImm, csr::Csr, csr_imm::CsrImm, funct3::Funct3, funct6::Funct6, funct7::Funct7,
+    immi::ImmI, immu::ImmU, jimm::JImm, rd::Rd, rs1::Rs1, rs2::Rs2, shamt::Shamt, simmi::SImmI,
 };
 
 use crate::{instruction_set::Exception, registers::Register};
@@ -652,6 +652,23 @@ pub(super) enum Instruction {
         /// least-significant bit of the result to zero.
         offset: i16,
     },
+
+    /// # Branch Equal
+    ///
+    /// Take the branch if registers rs1 and rs2 are equal.
+    ///
+    /// `if (rs1 == rs2) pc += sext(offset)`
+    BEQ {
+        /// Source register 1.
+        rs1: Register,
+        /// Source register 2.
+        rs2: Register,
+        /// The `13`-bit sign-extended offset.
+        ///
+        /// The target address is obtained by adding the `13`-bit signed
+        /// `B`-immediate to the programme counter.
+        offset: i16,
+    },
 }
 
 impl Instruction {
@@ -857,6 +874,14 @@ impl Instruction {
                 rd: Rd::decode(value),
                 offset: JImm::decode(value),
             },
+            0b_1100011 => match Funct3::decode(value) {
+                0b_000 => Instruction::BEQ {
+                    rs1: Rs1::decode(value),
+                    rs2: Rs2::decode(value),
+                    offset: BImm::decode(value),
+                },
+                _ => return Err(Exception::UnimplementedInstruction(value)),
+            },
             0b_1100111 => match Funct3::decode(value) {
                 0b_000 => Instruction::JALR {
                     rd: Rd::decode(value),
@@ -1019,6 +1044,10 @@ impl Instruction {
             Instruction::JALR { rd, rs1, offset } => {
                 u32::from_le(0b_0000000_00000_00000_000_00000_1100111)
                     + types::I::encode(rd, rs1, offset)
+            }
+            Instruction::BEQ { rs1, rs2, offset } => {
+                u32::from_le(0b_0000000_00000_00000_000_00000_1100011)
+                    + types::B::encode(rs1, rs2, offset)
             }
         }
     }
@@ -1969,6 +1998,31 @@ mod test {
             }
             .encode(),
             u32::from_le(0b_0010001_01010_01010_000_00101_1100111),
+        );
+    }
+
+    #[test]
+    fn beq_from_u32() {
+        assert_eq!(
+            Instruction::from(u32::from_le(0b_0000001_01010_01000_000_00001_1100011)),
+            Instruction::BEQ {
+                rs1: Register::FP,
+                rs2: Register::A0,
+                offset: 2080,
+            }
+        );
+    }
+
+    #[test]
+    fn encode_beq() {
+        assert_eq!(
+            Instruction::BEQ {
+                rs1: Register::FP,
+                rs2: Register::A0,
+                offset: -2016,
+            }
+            .encode(),
+            u32::from_le(0b_1000001_01010_01000_000_00001_1100011),
         );
     }
 }
