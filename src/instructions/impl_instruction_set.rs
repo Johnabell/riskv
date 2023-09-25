@@ -242,6 +242,15 @@ impl InstructionSet for Instruction {
                     pc = processor.pc + offset as i32;
                 }
             }
+            Instruction::BGEU { rs1, rs2, offset } => {
+                if processor.registers[rs1].as_unsigned() >= processor.registers[rs2].as_unsigned()
+                {
+                    if offset % 4 != 0 {
+                        return Err(Exception::MisalignedInstructionFetch);
+                    }
+                    pc = processor.pc + offset as i32;
+                }
+            }
         }
         processor.pc = pc;
         Ok(())
@@ -1465,6 +1474,35 @@ mod test {
             Instruction::BLTU { rs1: Register::RA, rs2: Register::S3, offset: -44 },
             executed_on: {registers: {ra: -42, s3: 43}, pc: 52},
             results_in: {registers: {ra: -42, s3: 43}, pc: 56 },
+        );
+    }
+
+    #[test]
+    fn execute_bgeu() {
+        test_execute!(
+            Instruction::BGEU { rs1: Register::RA, rs2: Register::S3, offset: -44 },
+            executed_on: {registers: {}, pc: 1000},
+            results_in: {registers: {}, pc: 956 },
+        );
+        test_execute!(
+            Instruction::BGEU { rs1: Register::RA, rs2: Register::S3, offset: -44 },
+            executed_on: {registers: {ra: 1}, pc: 1000},
+            results_in: {registers: {ra: 1}, pc: 956 },
+        );
+        test_execute!(
+            Instruction::BGEU { rs1: Register::RA, rs2: Register::S3, offset: -42 },
+            executed_on: {registers: {ra: 43, s3: 42}, pc: 52},
+            throws: Exception::MisalignedInstructionFetch
+        );
+        test_execute!(
+            Instruction::BGEU { rs1: Register::RA, rs2: Register::S3, offset: -44 },
+            executed_on: {registers: {ra: 43, s3: 42}, pc: 52},
+            results_in: {registers: {ra: 43, s3: 42}, pc: 8 },
+        );
+        test_execute!(
+            Instruction::BGEU { rs1: Register::RA, rs2: Register::S3, offset: -44 },
+            executed_on: {registers: {ra: -41, s3: 43}, pc: 52},
+            results_in: {registers: {ra: -41, s3: 43}, pc: 8 },
         );
     }
 }

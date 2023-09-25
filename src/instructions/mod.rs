@@ -738,6 +738,24 @@ pub(super) enum Instruction {
         /// `B`-immediate to the programme counter.
         offset: i16,
     },
+
+    /// # Branch Greater Than or Equal Unsigned
+    ///
+    /// Take the branch if registers rs1 is greater than or equal to rs2,
+    /// using unsigned comparison.
+    ///
+    /// `if (rs1 >=u rs2) pc += sext(offset)`
+    BGEU {
+        /// Source register 1.
+        rs1: Register,
+        /// Source register 2.
+        rs2: Register,
+        /// The `13`-bit sign-extended offset.
+        ///
+        /// The target address is obtained by adding the `13`-bit signed
+        /// `B`-immediate to the programme counter.
+        offset: i16,
+    },
 }
 
 impl Instruction {
@@ -969,6 +987,11 @@ impl Instruction {
                     rs2: Rs2::decode(value),
                     offset: BImm::decode(value),
                 },
+                0b_111 => Instruction::BGEU {
+                    rs1: Rs1::decode(value),
+                    rs2: Rs2::decode(value),
+                    offset: BImm::decode(value),
+                },
                 _ => return Err(Exception::UnimplementedInstruction(value)),
             },
             0b_1100111 => match Funct3::decode(value) {
@@ -1152,6 +1175,10 @@ impl Instruction {
             }
             Instruction::BLTU { rs1, rs2, offset } => {
                 u32::from_le(0b_0000000_00000_00000_110_00000_1100011)
+                    + types::B::encode(rs1, rs2, offset)
+            }
+            Instruction::BGEU { rs1, rs2, offset } => {
+                u32::from_le(0b_0000000_00000_00000_111_00000_1100011)
                     + types::B::encode(rs1, rs2, offset)
             }
         }
@@ -2228,6 +2255,31 @@ mod test {
             }
             .encode(),
             u32::from_le(0b_1000001_01111_01101_110_00001_1100011),
+        );
+    }
+
+    #[test]
+    fn bgeu_from_u32() {
+        assert_eq!(
+            Instruction::from(u32::from_le(0b_0000001_01111_01101_111_00001_1100011)),
+            Instruction::BGEU {
+                rs1: Register::A3,
+                rs2: Register::A5,
+                offset: 2080,
+            }
+        );
+    }
+
+    #[test]
+    fn encode_bgeu() {
+        assert_eq!(
+            Instruction::BGEU {
+                rs1: Register::A3,
+                rs2: Register::A5,
+                offset: -2016,
+            }
+            .encode(),
+            u32::from_le(0b_1000001_01111_01101_111_00001_1100011),
         );
     }
 }
