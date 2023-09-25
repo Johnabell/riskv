@@ -686,6 +686,23 @@ pub(super) enum Instruction {
         /// `B`-immediate to the programme counter.
         offset: i16,
     },
+
+    /// # Branch Less Than
+    ///
+    /// Take the branch if registers rs1 is less than rs2, using signed comparison.
+    ///
+    /// `if (rs1 < rs2) pc += sext(offset)`
+    BLT {
+        /// Source register 1.
+        rs1: Register,
+        /// Source register 2.
+        rs2: Register,
+        /// The `13`-bit sign-extended offset.
+        ///
+        /// The target address is obtained by adding the `13`-bit signed
+        /// `B`-immediate to the programme counter.
+        offset: i16,
+    },
 }
 
 impl Instruction {
@@ -902,6 +919,11 @@ impl Instruction {
                     rs2: Rs2::decode(value),
                     offset: BImm::decode(value),
                 },
+                0b_100 => Instruction::BLT {
+                    rs1: Rs1::decode(value),
+                    rs2: Rs2::decode(value),
+                    offset: BImm::decode(value),
+                },
                 _ => return Err(Exception::UnimplementedInstruction(value)),
             },
             0b_1100111 => match Funct3::decode(value) {
@@ -1073,6 +1095,10 @@ impl Instruction {
             }
             Instruction::BNE { rs1, rs2, offset } => {
                 u32::from_le(0b_0000000_00000_00000_001_00000_1100011)
+                    + types::B::encode(rs1, rs2, offset)
+            }
+            Instruction::BLT { rs1, rs2, offset } => {
+                u32::from_le(0b_0000000_00000_00000_100_00000_1100011)
                     + types::B::encode(rs1, rs2, offset)
             }
         }
@@ -2074,6 +2100,31 @@ mod test {
             }
             .encode(),
             u32::from_le(0b_1000001_01011_01001_001_00011_1100011),
+        );
+    }
+
+    #[test]
+    fn blt_from_u32() {
+        assert_eq!(
+            Instruction::from(u32::from_le(0b_0000001_01111_01101_100_00001_1100011)),
+            Instruction::BLT {
+                rs1: Register::A3,
+                rs2: Register::A5,
+                offset: 2080,
+            }
+        );
+    }
+
+    #[test]
+    fn encode_blt() {
+        assert_eq!(
+            Instruction::BLT {
+                rs1: Register::A3,
+                rs2: Register::A5,
+                offset: -2016,
+            }
+            .encode(),
+            u32::from_le(0b_1000001_01111_01101_100_00001_1100011),
         );
     }
 }

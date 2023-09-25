@@ -218,6 +218,14 @@ impl InstructionSet for Instruction {
                     pc = processor.pc + offset as i32;
                 }
             }
+            Instruction::BLT { rs1, rs2, offset } => {
+                if processor.registers[rs1] < processor.registers[rs2] {
+                    if offset % 4 != 0 {
+                        return Err(Exception::MisalignedInstructionFetch);
+                    }
+                    pc = processor.pc + offset as i32;
+                }
+            }
         }
         processor.pc = pc;
         Ok(())
@@ -1354,6 +1362,35 @@ mod test {
             Instruction::BNE { rs1: Register::RA, rs2: Register::S3, offset: -44 },
             executed_on: {registers: {ra: 42, s3: 41}, pc: 52},
             results_in: {registers: {ra: 42, s3: 41}, pc: 8 },
+        );
+    }
+
+    #[test]
+    fn execute_blt() {
+        test_execute!(
+            Instruction::BLT { rs1: Register::RA, rs2: Register::S3, offset: -44 },
+            executed_on: {registers: {}, pc: 1000},
+            results_in: {registers: {}, pc: 1004 },
+        );
+        test_execute!(
+            Instruction::BLT { rs1: Register::RA, rs2: Register::S3, offset: -44 },
+            executed_on: {registers: {s3: 1}, pc: 1000},
+            results_in: {registers: {s3: 1}, pc: 956 },
+        );
+        test_execute!(
+            Instruction::BLT { rs1: Register::RA, rs2: Register::S3, offset: -42 },
+            executed_on: {registers: {ra: 41, s3: 42}, pc: 52},
+            throws: Exception::MisalignedInstructionFetch
+        );
+        test_execute!(
+            Instruction::BLT { rs1: Register::RA, rs2: Register::S3, offset: -44 },
+            executed_on: {registers: {ra: 43, s3: 42}, pc: 52},
+            results_in: {registers: {ra: 43, s3: 42}, pc: 56 },
+        );
+        test_execute!(
+            Instruction::BLT { rs1: Register::RA, rs2: Register::S3, offset: -44 },
+            executed_on: {registers: {ra: -42, s3: 43}, pc: 52},
+            results_in: {registers: {ra: -42, s3: 43}, pc: 8 },
         );
     }
 }
