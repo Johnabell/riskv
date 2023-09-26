@@ -1696,4 +1696,33 @@ mod test {
             results_in: {registers: {ra: -41, s3: 43}, pc: 8 },
         );
     }
+
+    #[test]
+    fn execute_bleu() {
+        test_execute!(
+            Instruction::BLEU(Register::RA, Register::S3, -44),
+            executed_on: {registers: {}, pc: 1000},
+            results_in: {registers: {}, pc: 956 },
+        );
+        test_execute!(
+            Instruction::BLEU(Register::RA, Register::S3, -44),
+            executed_on: {registers: {ra: 1}, pc: 1000},
+            results_in: {registers: {ra: 1}, pc: 1004 },
+        );
+        test_execute!(
+            Instruction::BLEU(Register::RA, Register::S3, -42),
+            executed_on: {registers: {ra: 41, s3: 42}, pc: 5},
+            throws: Exception::MisalignedInstructionFetch
+        );
+        test_execute!(
+            Instruction::BLEU(Register::RA, Register::S3, -44),
+            executed_on: {registers: {ra: 41, s3: 42}, pc: 52},
+            results_in: {registers: {ra: 41, s3: 42}, pc: 8 },
+        );
+        test_execute!(
+            Instruction::BLEU(Register::RA, Register::S3, -44),
+            executed_on: {registers: {ra: 41, s3: -43}, pc: 52},
+            results_in: {registers: {ra: 41, s3: -43}, pc: 8 },
+        );
+    }
 }

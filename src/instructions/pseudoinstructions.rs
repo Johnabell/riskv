@@ -590,7 +590,7 @@ impl Instruction {
     /// # Branch greater than unsigned
     ///
     /// Branch if the value in register `rs1` is greater than the value in `rs2`,
-    /// when using unsigend comparison.
+    /// when using unsigned comparison.
     ///
     /// Note: This pseudoinstruction desugars to `BLTU rs2, rs1, offset`
     /// See
@@ -598,6 +598,23 @@ impl Instruction {
     #[allow(non_snake_case)]
     pub(crate) fn BGTU(rs1: Register, rs2: Register, offset: i16) -> PseudoinstructionMappingIter {
         PseudoinstructionMappingIter::One(Instruction::BLTU {
+            rs1: rs2,
+            rs2: rs1,
+            offset,
+        })
+    }
+
+    /// # Branch less than or equal unsigned
+    ///
+    /// Branch if the value in register `rs1` is less than or equal to the value in `rs2`,
+    /// when using unsigned comparison.
+    ///
+    /// Note: This pseudoinstruction desugars to `BGEU rs2, rs1, offset`
+    /// See
+    /// [ref](https://github.com/riscv-non-isa/riscv-asm-manual/blob/master/riscv-asm.md#-a-listing-of-standard-risc-v-pseudoinstructions)
+    #[allow(non_snake_case)]
+    pub(crate) fn BLEU(rs1: Register, rs2: Register, offset: i16) -> PseudoinstructionMappingIter {
+        PseudoinstructionMappingIter::One(Instruction::BGEU {
             rs1: rs2,
             rs2: rs1,
             offset,
