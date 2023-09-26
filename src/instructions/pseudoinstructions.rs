@@ -506,6 +506,22 @@ impl Instruction {
             offset,
         })
     }
+
+    /// # Branch greater than or equal to zero
+    ///
+    /// Branch if the value in register `rs` greater than or equal to zero.
+    ///
+    /// Note: This pseudoinstruction desugars to `BGE rs, x0, offset`
+    /// See
+    /// [ref](https://github.com/riscv-non-isa/riscv-asm-manual/blob/master/riscv-asm.md#-a-listing-of-standard-risc-v-pseudoinstructions)
+    #[allow(non_snake_case)]
+    pub(crate) fn BGEZ(rs: Register, offset: i16) -> PseudoinstructionMappingIter {
+        PseudoinstructionMappingIter::One(Instruction::BGE {
+            rs1: rs,
+            rs2: Register::ZERO,
+            offset,
+        })
+    }
 }
 
 /// If the `i12` value is negative returns `1` otherwise returns `0`.

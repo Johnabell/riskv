@@ -1506,6 +1506,25 @@ mod test {
     }
 
     #[test]
+    fn execute_bgez() {
+        test_execute!(
+            Instruction::BGEZ(Register::RA, -44),
+            executed_on: {registers: {}, pc: 1000},
+            results_in: {registers: {}, pc: 956 },
+        );
+        test_execute!(
+            Instruction::BGEZ(Register::RA, -42),
+            executed_on: {registers: {ra: -1}, pc: 1000},
+            results_in: {registers: {ra: -1}, pc: 1004 },
+        );
+        test_execute!(
+            Instruction::BGEZ(Register::RA, -42),
+            executed_on: {registers: {ra: 1}, pc: 52},
+            throws: Exception::MisalignedInstructionFetch
+        );
+    }
+
+    #[test]
     fn execute_bltu() {
         test_execute!(
             Instruction::BLTU { rs1: Register::RA, rs2: Register::S3, offset: -44 },
