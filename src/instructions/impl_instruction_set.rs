@@ -1458,6 +1458,35 @@ mod test {
     }
 
     #[test]
+    fn execute_ble() {
+        test_execute!(
+            Instruction::BLE(Register::RA, Register::S3, -44),
+            executed_on: {registers: {}, pc: 1000},
+            results_in: {registers: {}, pc: 956 },
+        );
+        test_execute!(
+            Instruction::BLE(Register::RA, Register::S3, -42),
+            executed_on: {registers: {s3: -1}, pc: 1000},
+            results_in: {registers: {s3: -1}, pc: 1004 },
+        );
+        test_execute!(
+            Instruction::BLE(Register::RA, Register::S3, -42),
+            executed_on: {registers: {ra: 41, s3: 42}, pc: 52},
+            throws: Exception::MisalignedInstructionFetch
+        );
+        test_execute!(
+            Instruction::BLE(Register::RA, Register::S3, -44),
+            executed_on: {registers: {ra: 43, s3: 42}, pc: 52},
+            results_in: {registers: {ra: 43, s3: 42}, pc: 56 },
+        );
+        test_execute!(
+            Instruction::BLE(Register::RA, Register::S3, -44),
+            executed_on: {registers: {ra: -42, s3: 43}, pc: 52},
+            results_in: {registers: {ra: -42, s3: 43}, pc: 8 },
+        );
+    }
+
+    #[test]
     fn execute_bltz() {
         test_execute!(
             Instruction::BLTZ(Register::RA, -44),

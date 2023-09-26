@@ -570,6 +570,22 @@ impl Instruction {
             offset,
         })
     }
+
+    /// # Branch less than or equal
+    ///
+    /// Branch if the value in register `rs1` is less than or equal to the value in `rs2`.
+    ///
+    /// Note: This pseudoinstruction desugars to `BGE rs2, rs1, offset`
+    /// See
+    /// [ref](https://github.com/riscv-non-isa/riscv-asm-manual/blob/master/riscv-asm.md#-a-listing-of-standard-risc-v-pseudoinstructions)
+    #[allow(non_snake_case)]
+    pub(crate) fn BLE(rs1: Register, rs2: Register, offset: i16) -> PseudoinstructionMappingIter {
+        PseudoinstructionMappingIter::One(Instruction::BGE {
+            rs1: rs2,
+            rs2: rs1,
+            offset,
+        })
+    }
 }
 
 /// If the `i12` value is negative returns `1` otherwise returns `0`.
