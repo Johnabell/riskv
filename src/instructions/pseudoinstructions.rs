@@ -538,6 +538,22 @@ impl Instruction {
             offset,
         })
     }
+
+    /// # Branch greater than zero
+    ///
+    /// Branch if the value in register `rs` is greater than zero.
+    ///
+    /// Note: This pseudoinstruction desugars to `BLT x0, rs, offset`
+    /// See
+    /// [ref](https://github.com/riscv-non-isa/riscv-asm-manual/blob/master/riscv-asm.md#-a-listing-of-standard-risc-v-pseudoinstructions)
+    #[allow(non_snake_case)]
+    pub(crate) fn BGTZ(rs: Register, offset: i16) -> PseudoinstructionMappingIter {
+        PseudoinstructionMappingIter::One(Instruction::BLT {
+            rs1: Register::ZERO,
+            rs2: rs,
+            offset,
+        })
+    }
 }
 
 /// If the `i12` value is negative returns `1` otherwise returns `0`.
