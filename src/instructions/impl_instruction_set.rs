@@ -17,6 +17,7 @@ impl InstructionSet for Instruction {
     type RegisterType = i32;
     type CSRType = CSR32;
 
+    #[inline]
     fn decode(raw_instruction: u32) -> Result<Self, Exception> {
         raw_instruction.try_into()
     }
@@ -25,13 +26,18 @@ impl InstructionSet for Instruction {
         self.encode()
     }
 
+    #[inline]
+    fn instruction_size(&self) -> Self::RegisterType {
+        4
+    }
+
     fn execute(
         self,
         processor: &mut Processor<Self::RegisterType, Self::CSRType>,
     ) -> Result<(), Exception> {
         // By default, after this instruction, we will move to the next one. Instructions that do
         // something different e.g. JAL can set this variable to modify the pc.
-        let pc = processor.pc + 4;
+        let pc = processor.pc + self.instruction_size();
 
         match self {
             Instruction::LUI { rd, imm } => processor.registers[rd] = imm << 12,
