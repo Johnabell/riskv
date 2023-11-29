@@ -13,7 +13,7 @@ impl InstructionSet for Instruction {
     type CSRType = CSR32;
 
     fn decode(raw_instruction: u32) -> Result<Self, Exception> {
-        Ok(raw_instruction.into())
+        raw_instruction.try_into()
     }
 
     fn execute(

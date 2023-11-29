@@ -203,8 +203,8 @@ pub(super) enum Register {
     T6 = 31,
 }
 
-impl From<u8> for Register {
-    fn from(value: u8) -> Register {
+impl Register {
+    pub(crate) const fn const_from(value: u8) -> Register {
         match value & 0b_0001_1111 {
             0 => Register::ZERO,
             1 => Register::RA,
@@ -238,8 +238,14 @@ impl From<u8> for Register {
             29 => Register::T4,
             30 => Register::T5,
             31 => Register::T6,
-            _ => unreachable!("Already masked the value"),
+            _ => panic!("Unreachable: Already masked the value"),
         }
+    }
+}
+
+impl From<u8> for Register {
+    fn from(value: u8) -> Register {
+        Self::const_from(value)
     }
 }
 

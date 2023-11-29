@@ -19,7 +19,7 @@ use self::{
     immu::ImmU, rd::Rd, rs1::Rs1, rs2::Rs2, shamt::Shamt, simmi::SImmI,
 };
 
-use crate::registers::Register;
+use crate::{instruction_set::Exception, registers::Register};
 
 /// An representation of different instructions.
 ///
@@ -444,228 +444,216 @@ pub(super) enum Instruction {
     CSRRCI { rd: Register, csr: u16, imm: u8 },
 }
 
-impl From<u32> for Instruction {
-    fn from(value: u32) -> Self {
-        match Instruction::op_code(value) {
+impl Instruction {
+    const fn decode(value: u32) -> Result<Self, Exception> {
+        let instruction = match Instruction::op_code(value) {
             0b_0110111 => Instruction::LUI {
-                rd: *Rd::from(value),
-                imm: *ImmU::from(value),
+                rd: Rd::decode(value),
+                imm: ImmU::decode(value),
             },
             0b_0010111 => Instruction::AUIPC {
-                rd: *Rd::from(value),
-                imm: *ImmU::from(value),
+                rd: Rd::decode(value),
+                imm: ImmU::decode(value),
             },
-            0b_0010011 => match *Funct3::from(value) {
+            0b_0010011 => match Funct3::decode(value) {
                 0b_000 => Instruction::ADDI {
-                    rd: *Rd::from(value),
-                    rs1: *Rs1::from(value),
-                    imm: *ImmI::from(value),
+                    rd: Rd::decode(value),
+                    rs1: Rs1::decode(value),
+                    imm: ImmI::decode(value),
                 },
                 0b_001 => Instruction::SLLI {
-                    rd: *Rd::from(value),
-                    rs1: *Rs1::from(value),
-                    shamt: *Shamt::from(value),
+                    rd: Rd::decode(value),
+                    rs1: Rs1::decode(value),
+                    shamt: Shamt::decode(value),
                 },
                 0b_010 => Instruction::SLTI {
-                    rd: *Rd::from(value),
-                    rs1: *Rs1::from(value),
-                    imm: *ImmI::from(value),
+                    rd: Rd::decode(value),
+                    rs1: Rs1::decode(value),
+                    imm: ImmI::decode(value),
                 },
                 0b_011 => Instruction::SLTIU {
-                    rd: *Rd::from(value),
-                    rs1: *Rs1::from(value),
-                    imm: *ImmI::from(value),
+                    rd: Rd::decode(value),
+                    rs1: Rs1::decode(value),
+                    imm: ImmI::decode(value),
                 },
                 0b_100 => Instruction::XORI {
-                    rd: *Rd::from(value),
-                    rs1: *Rs1::from(value),
-                    imm: *ImmI::from(value),
+                    rd: Rd::decode(value),
+                    rs1: Rs1::decode(value),
+                    imm: ImmI::decode(value),
                 },
-                0b_101 => match *Funct6::from(value) {
+                0b_101 => match Funct6::decode(value) {
                     0b_000000 => Instruction::SRLI {
-                        rd: *Rd::from(value),
-                        rs1: *Rs1::from(value),
-                        shamt: *Shamt::from(value),
+                        rd: Rd::decode(value),
+                        rs1: Rs1::decode(value),
+                        shamt: Shamt::decode(value),
                     },
                     0b_010000 => Instruction::SRAI {
-                        rd: *Rd::from(value),
-                        rs1: *Rs1::from(value),
-                        shamt: *Shamt::from(value),
+                        rd: Rd::decode(value),
+                        rs1: Rs1::decode(value),
+                        shamt: Shamt::decode(value),
                     },
-                    _ => unimplemented!(
-                        "The given instruction is not yet implemented {:#034b}",
-                        value.to_le()
-                    ),
+                    _ => return Err(Exception::UnimplementedInstruction(value)),
                 },
                 0b_110 => Instruction::ORI {
-                    rd: *Rd::from(value),
-                    rs1: *Rs1::from(value),
-                    imm: *ImmI::from(value),
+                    rd: Rd::decode(value),
+                    rs1: Rs1::decode(value),
+                    imm: ImmI::decode(value),
                 },
                 0b_111 => Instruction::ANDI {
-                    rd: *Rd::from(value),
-                    rs1: *Rs1::from(value),
-                    imm: *ImmI::from(value),
+                    rd: Rd::decode(value),
+                    rs1: Rs1::decode(value),
+                    imm: ImmI::decode(value),
                 },
-                _ => unimplemented!(
-                    "The given instruction is not yet implemented {:#034b}",
-                    value.to_le()
-                ),
+                _ => return Err(Exception::UnimplementedInstruction(value)),
             },
-            0b_0110011 => match (*Funct3::from(value), *Funct7::from(value)) {
+            0b_0110011 => match (Funct3::decode(value), Funct7::decode(value)) {
                 (0b_000, 0b_0000000) => Instruction::ADD {
-                    rd: *Rd::from(value),
-                    rs1: *Rs1::from(value),
-                    rs2: *Rs2::from(value),
+                    rd: Rd::decode(value),
+                    rs1: Rs1::decode(value),
+                    rs2: Rs2::decode(value),
                 },
                 (0b_000, 0b_0100000) => Instruction::SUB {
-                    rd: *Rd::from(value),
-                    rs1: *Rs1::from(value),
-                    rs2: *Rs2::from(value),
+                    rd: Rd::decode(value),
+                    rs1: Rs1::decode(value),
+                    rs2: Rs2::decode(value),
                 },
                 (0b_001, 0b_0000000) => Instruction::SLL {
-                    rd: *Rd::from(value),
-                    rs1: *Rs1::from(value),
-                    rs2: *Rs2::from(value),
+                    rd: Rd::decode(value),
+                    rs1: Rs1::decode(value),
+                    rs2: Rs2::decode(value),
                 },
                 (0b_010, 0b_0000000) => Instruction::SLT {
-                    rd: *Rd::from(value),
-                    rs1: *Rs1::from(value),
-                    rs2: *Rs2::from(value),
+                    rd: Rd::decode(value),
+                    rs1: Rs1::decode(value),
+                    rs2: Rs2::decode(value),
                 },
                 (0b_011, 0b_0000000) => Instruction::SLTU {
-                    rd: *Rd::from(value),
-                    rs1: *Rs1::from(value),
-                    rs2: *Rs2::from(value),
+                    rd: Rd::decode(value),
+                    rs1: Rs1::decode(value),
+                    rs2: Rs2::decode(value),
                 },
                 (0b_100, 0b_0000000) => Instruction::XOR {
-                    rd: *Rd::from(value),
-                    rs1: *Rs1::from(value),
-                    rs2: *Rs2::from(value),
+                    rd: Rd::decode(value),
+                    rs1: Rs1::decode(value),
+                    rs2: Rs2::decode(value),
                 },
                 (0b_101, 0b_0000000) => Instruction::SRL {
-                    rd: *Rd::from(value),
-                    rs1: *Rs1::from(value),
-                    rs2: *Rs2::from(value),
+                    rd: Rd::decode(value),
+                    rs1: Rs1::decode(value),
+                    rs2: Rs2::decode(value),
                 },
                 (0b_101, 0b_0100000) => Instruction::SRA {
-                    rd: *Rd::from(value),
-                    rs1: *Rs1::from(value),
-                    rs2: *Rs2::from(value),
+                    rd: Rd::decode(value),
+                    rs1: Rs1::decode(value),
+                    rs2: Rs2::decode(value),
                 },
                 (0b_110, 0b_0100000) => Instruction::OR {
-                    rd: *Rd::from(value),
-                    rs1: *Rs1::from(value),
-                    rs2: *Rs2::from(value),
+                    rd: Rd::decode(value),
+                    rs1: Rs1::decode(value),
+                    rs2: Rs2::decode(value),
                 },
                 (0b_111, 0b_0100000) => Instruction::AND {
-                    rd: *Rd::from(value),
-                    rs1: *Rs1::from(value),
-                    rs2: *Rs2::from(value),
+                    rd: Rd::decode(value),
+                    rs1: Rs1::decode(value),
+                    rs2: Rs2::decode(value),
                 },
-                _ => unimplemented!(
-                    "The given instruction is not yet implemented {:#034b}",
-                    value.to_le()
-                ),
+                _ => return Err(Exception::UnimplementedInstruction(value)),
             },
-            0b_0000011 => match *Funct3::from(value) {
+            0b_0000011 => match Funct3::decode(value) {
                 0b_000 => Instruction::LB {
-                    rd: *Rd::from(value),
-                    rs1: *Rs1::from(value),
-                    offset: *ImmI::from(value),
+                    rd: Rd::decode(value),
+                    rs1: Rs1::decode(value),
+                    offset: ImmI::decode(value),
                 },
                 0b_001 => Instruction::LH {
-                    rd: *Rd::from(value),
-                    rs1: *Rs1::from(value),
-                    offset: *ImmI::from(value),
+                    rd: Rd::decode(value),
+                    rs1: Rs1::decode(value),
+                    offset: ImmI::decode(value),
                 },
                 0b_010 => Instruction::LW {
-                    rd: *Rd::from(value),
-                    rs1: *Rs1::from(value),
-                    offset: *ImmI::from(value),
+                    rd: Rd::decode(value),
+                    rs1: Rs1::decode(value),
+                    offset: ImmI::decode(value),
                 },
                 0b_100 => Instruction::LBU {
-                    rd: *Rd::from(value),
-                    rs1: *Rs1::from(value),
-                    offset: *ImmI::from(value),
+                    rd: Rd::decode(value),
+                    rs1: Rs1::decode(value),
+                    offset: ImmI::decode(value),
                 },
                 0b_101 => Instruction::LHU {
-                    rd: *Rd::from(value),
-                    rs1: *Rs1::from(value),
-                    offset: *ImmI::from(value),
+                    rd: Rd::decode(value),
+                    rs1: Rs1::decode(value),
+                    offset: ImmI::decode(value),
                 },
-                _ => unimplemented!(
-                    "The given instruction is not yet implemented {:#034b}",
-                    value.to_le()
-                ),
+                _ => return Err(Exception::UnimplementedInstruction(value)),
             },
-            0b_0100011 => match *Funct3::from(value) {
+            0b_0100011 => match Funct3::decode(value) {
                 0b_000 => Instruction::SB {
-                    rs1: *Rs1::from(value),
-                    rs2: *Rs2::from(value),
-                    offset: *SImmI::from(value),
+                    rs1: Rs1::decode(value),
+                    rs2: Rs2::decode(value),
+                    offset: SImmI::decode(value),
                 },
                 0b_001 => Instruction::SH {
-                    rs1: *Rs1::from(value),
-                    rs2: *Rs2::from(value),
-                    offset: *SImmI::from(value),
+                    rs1: Rs1::decode(value),
+                    rs2: Rs2::decode(value),
+                    offset: SImmI::decode(value),
                 },
                 0b_010 => Instruction::SW {
-                    rs1: *Rs1::from(value),
-                    rs2: *Rs2::from(value),
-                    offset: *SImmI::from(value),
+                    rs1: Rs1::decode(value),
+                    rs2: Rs2::decode(value),
+                    offset: SImmI::decode(value),
                 },
-                _ => unimplemented!(
-                    "The given instruction is not yet implemented {:#034b}",
-                    value.to_le()
-                ),
+                _ => return Err(Exception::UnimplementedInstruction(value)),
             },
-            0b_1110011 => match *Funct3::from(value) {
+            0b_1110011 => match Funct3::decode(value) {
                 0b_001 => Instruction::CSRRW {
-                    rd: *Rd::from(value),
-                    rs1: *Rs1::from(value),
-                    csr: *Csr::from(value),
+                    rd: Rd::decode(value),
+                    rs1: Rs1::decode(value),
+                    csr: Csr::decode(value),
                 },
                 0b_010 => Instruction::CSRRS {
-                    rd: *Rd::from(value),
-                    rs1: *Rs1::from(value),
-                    csr: *Csr::from(value),
+                    rd: Rd::decode(value),
+                    rs1: Rs1::decode(value),
+                    csr: Csr::decode(value),
                 },
                 0b_011 => Instruction::CSRRC {
-                    rd: *Rd::from(value),
-                    rs1: *Rs1::from(value),
-                    csr: *Csr::from(value),
+                    rd: Rd::decode(value),
+                    rs1: Rs1::decode(value),
+                    csr: Csr::decode(value),
                 },
                 0b_101 => Instruction::CSRRWI {
-                    rd: *Rd::from(value),
-                    imm: *CsrImm::from(value),
-                    csr: *Csr::from(value),
+                    rd: Rd::decode(value),
+                    imm: CsrImm::decode(value),
+                    csr: Csr::decode(value),
                 },
                 0b_110 => Instruction::CSRRSI {
-                    rd: *Rd::from(value),
-                    imm: *CsrImm::from(value),
-                    csr: *Csr::from(value),
+                    rd: Rd::decode(value),
+                    imm: CsrImm::decode(value),
+                    csr: Csr::decode(value),
                 },
                 0b_111 => Instruction::CSRRCI {
-                    rd: *Rd::from(value),
-                    imm: *CsrImm::from(value),
-                    csr: *Csr::from(value),
+                    rd: Rd::decode(value),
+                    imm: CsrImm::decode(value),
+                    csr: Csr::decode(value),
                 },
-                _ => unimplemented!(
-                    "The given instruction is not yet implemented {:#034b}",
-                    value.to_le()
-                ),
+                _ => return Err(Exception::UnimplementedInstruction(value)),
             },
-            _ => unimplemented!(
-                "The given instruction is not yet implemented {:#034b}",
-                value.to_le()
-            ),
-        }
+            _ => return Err(Exception::UnimplementedInstruction(value)),
+        };
+        Ok(instruction)
+    }
+}
+
+impl TryFrom<u32> for Instruction {
+    type Error = Exception;
+    fn try_from(value: u32) -> Result<Self, Self::Error> {
+        Instruction::decode(value)
     }
 }
 
 impl Instruction {
-    fn op_code(value: u32) -> u8 {
+    #[inline]
+    const fn op_code(value: u32) -> u8 {
         (value & OPP_MASK) as u8
     }
 }
@@ -676,6 +664,12 @@ const OPP_MASK: u32 = u32::from_le(0b_0000000_00000_00000_000_00000_1111111);
 mod test {
     use crate::{instructions::Instruction, registers::Register};
     use pretty_assertions::assert_eq;
+
+    impl Instruction {
+        fn from(value: u32) -> Self {
+            Self::try_from(value).expect("Unimplemented")
+        }
+    }
 
     #[test]
     fn lui_from_i32() {
