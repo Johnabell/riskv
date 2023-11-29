@@ -76,9 +76,7 @@ pub trait InstructionSet: Sized {
     ) -> Result<(), Exception>;
 
     /// Returns the size of this instruction in number of bytes
-    fn instruction_size(&self) -> usize {
-        4
-    }
+    fn instruction_size(&self) -> Self::RegisterType;
 }
 
 #[cfg(test)]
