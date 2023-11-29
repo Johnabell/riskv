@@ -1,3 +1,4 @@
+//! Macros to help write clean and concise tests without lots of boiler plate.
 use crate::instructions::Instruction;
 
 /// Used by the test macros to make it possible to treat instructions and
@@ -135,15 +136,27 @@ macro_rules! processor_state {
 ///
 /// # Example usage
 ///
+/// For a test where the expectation that the processor state will successfully
+/// be updated:
+///
 /// ```ignore
 /// test_execute!(
 ///     Instruction::CSRRW { rd: Register::A0, rs1: Register::S10, csr: 20 },
-///     changes: {registers: {a0: 3, s10: 12}},
-///     to: {registers: {a0: 0, s10: 12}, csr: {20: 12}, pc: 4},
+///     executed_on: {registers: {a0: 3, s10: 12}},
+///     results_in: {registers: {a0: 0, s10: 12}, csr: {20: 12}, pc: 4},
+/// );
+///
+/// For a test where the expectation is that an exception will be thrown:
+///
+/// ```ignore
+/// test_execute!(
+///     Instruction::JAL { rd: Register::RA, offset: -42 },
+///     executed_on: {registers: {}, pc: 84},
+///     throws: Exception::MisalignedInstructionFetch,
 /// );
 /// ```
 macro_rules! test_execute {
-    ($instruction:expr, changes: $initial_state:tt, to: $final_state:tt $(,)?) => {{
+    ($instruction:expr, executed_on: $initial_state:tt, results_in: $final_state:tt $(,)?) => {{
         // Arrange
         let mut processor = processor_state!($initial_state);
 
@@ -156,6 +169,30 @@ macro_rules! test_execute {
         let expected_state = processor_state!($final_state);
         assert_eq!(processor, expected_state);
         processor
+    }};
+    ($instruction:expr, executed_on: $initial_state:tt, throws: $exception:expr $(,)?) => {{
+        // Arrange
+        let mut processor = processor_state!($initial_state);
+
+        // Act
+        let result = $instruction
+            .into_iter()
+            .try_for_each(|instruction| instruction.execute(&mut processor));
+
+        assert_eq!(result, Err($exception));
+        assert_eq!(processor, processor_state!($initial_state));
+    }};
+    ($instruction:expr, executed_on: $initial_state:tt, throws: $exception:expr, with_final_state: $final_state:tt $(,)?) => {{
+        // Arrange
+        let mut processor = processor_state!($initial_state);
+
+        // Act
+        let result = $instruction
+            .into_iter()
+            .try_for_each(|instruction| instruction.execute(&mut processor));
+
+        assert_eq!(result, Err($exception));
+        assert_eq!(processor, processor_state!($final_state));
     }};
 }
 

@@ -1,11 +1,21 @@
+//! RISC-V Pseudoinstruction
 use crate::{integer::i12, registers::Register};
 
 use super::{immu::ImmU, Instruction};
 
+/// An iterator of up to 3 instructions.
+///
+/// All pseudoinstructions desugar to a number of instructions.
+///
+/// This is encapsulated by this iterator.
 pub(crate) enum PseudoinstructionMappingIter {
+    /// The iterator which will yield three instructions.
     Three(Instruction, Instruction, Instruction),
+    /// The iterator which will yield two instructions.
     Two(Instruction, Instruction),
+    /// The iterator which will yield one instruction.
     One(Instruction),
+    /// The iterator which will yield no instructions.
     Zero,
 }
 
@@ -83,7 +93,7 @@ impl Instruction {
                 Instruction::ADDI {
                     rd,
                     rs1: rd,
-                    imm: sign_extend_i12(imm),
+                    imm: i12::sign_extend(imm),
                 },
             )
         }
@@ -328,22 +338,131 @@ impl Instruction {
             csr,
         })
     }
-}
 
-fn sign_extend_i12(value: i32) -> i16 {
-    if is_positive_i12(value) {
-        (value & 0x7FF) as i16
-    } else {
-        (value & 0xFFF | 0xF000) as i16
+    /// # Jump and link
+    ///
+    /// Jump and link using the default return address register.
+    ///
+    /// Note: This pseudoinstruction desugars to `JAL x1, offset`
+    /// See
+    /// [ref](https://github.com/riscv-non-isa/riscv-asm-manual/blob/master/riscv-asm.md#-a-listing-of-standard-risc-v-pseudoinstructions)
+    #[allow(non_snake_case)]
+    pub(crate) fn JAL(offset: i32) -> PseudoinstructionMappingIter {
+        PseudoinstructionMappingIter::One(Instruction::JAL {
+            rd: Register::RA,
+            offset,
+        })
+    }
+
+    /// # Unconditional Jump
+    ///
+    /// Jump to the relative offset without linking the return address
+    ///
+    /// Note: This pseudoinstruction desugars to `JAL x0, offset`
+    /// See
+    /// [ref](https://github.com/riscv-non-isa/riscv-asm-manual/blob/master/riscv-asm.md#-a-listing-of-standard-risc-v-pseudoinstructions)
+    #[allow(non_snake_case)]
+    pub(crate) fn J(offset: i32) -> PseudoinstructionMappingIter {
+        PseudoinstructionMappingIter::One(Instruction::JAL {
+            rd: Register::ZERO,
+            offset,
+        })
+    }
+
+    /// # Jump and link register
+    ///
+    /// Jump and link using the default return address register.
+    ///
+    /// Note: This pseudoinstruction desugars to `JALR x1, rs, 0`
+    /// See
+    /// [ref](https://github.com/riscv-non-isa/riscv-asm-manual/blob/master/riscv-asm.md#-a-listing-of-standard-risc-v-pseudoinstructions)
+    #[allow(non_snake_case)]
+    pub(crate) fn JALR(rs: Register) -> PseudoinstructionMappingIter {
+        PseudoinstructionMappingIter::One(Instruction::JALR {
+            rd: Register::RA,
+            rs1: rs,
+            offset: 0,
+        })
+    }
+
+    /// # Unconditional Jump register
+    ///
+    /// Jump to the relative offset without linking the return address
+    ///
+    /// Note: This pseudoinstruction desugars to `JALR x0, rs, 0`
+    /// See
+    /// [ref](https://github.com/riscv-non-isa/riscv-asm-manual/blob/master/riscv-asm.md#-a-listing-of-standard-risc-v-pseudoinstructions)
+    #[allow(non_snake_case)]
+    pub(crate) fn JR(rs: Register) -> PseudoinstructionMappingIter {
+        PseudoinstructionMappingIter::One(Instruction::JALR {
+            rd: Register::ZERO,
+            rs1: rs,
+            offset: 0,
+        })
+    }
+
+    /// # Return
+    ///
+    /// Return from a call to a subroutine.
+    ///
+    /// Note: This pseudoinstruction desugars to `JALR x0, x1, 0`
+    /// See
+    /// [ref](https://github.com/riscv-non-isa/riscv-asm-manual/blob/master/riscv-asm.md#-a-listing-of-standard-risc-v-pseudoinstructions)
+    pub(crate) const RET: PseudoinstructionMappingIter =
+        PseudoinstructionMappingIter::One(Instruction::JALR {
+            rd: Register::ZERO,
+            rs1: Register::RA,
+            offset: 0,
+        });
+
+    /// # Call far away subroutine
+    ///
+    /// Jump to the relative offset without linking the return address
+    ///
+    /// Note: This pseudoinstruction desugars to `AUIPC x1, imm[31:12]; JALR x1, x1, imm[11:0]`
+    /// See
+    /// [ref](https://github.com/riscv-non-isa/riscv-asm-manual/blob/master/riscv-asm.md#-a-listing-of-standard-risc-v-pseudoinstructions)
+    #[allow(non_snake_case)]
+    pub(crate) fn CALL(address: i32) -> PseudoinstructionMappingIter {
+        PseudoinstructionMappingIter::Two(
+            Instruction::AUIPC {
+                rd: Register::RA,
+                imm: (address >> ImmU::RSHIFT),
+            },
+            Instruction::JALR {
+                rd: Register::RA,
+                rs1: Register::RA,
+                offset: (address as i16) & i12::MASK,
+            },
+        )
+    }
+
+    /// # Tail call far away subroutine
+    ///
+    /// Jump to the address and tail call the subroutine.
+    ///
+    /// Note: This pseudoinstruction desugars to `AUIPC x6, imm[31:12]; JALR x0, x6, imm[11:0]`
+    /// See
+    /// [ref](https://github.com/riscv-non-isa/riscv-asm-manual/blob/master/riscv-asm.md#-a-listing-of-standard-risc-v-pseudoinstructions)
+    #[allow(non_snake_case)]
+    pub(crate) fn TAIL(address: i32) -> PseudoinstructionMappingIter {
+        PseudoinstructionMappingIter::Two(
+            Instruction::AUIPC {
+                rd: Register::T1,
+                imm: (address >> ImmU::RSHIFT),
+            },
+            Instruction::JALR {
+                rd: Register::ZERO,
+                rs1: Register::T1,
+                offset: (address as i16) & i12::MASK,
+            },
+        )
     }
 }
 
-fn is_positive_i12(value: i32) -> bool {
-    value & 0b_1000_0000_0000 == 0
-}
-
+/// If the `i12` value is negative returns `1` otherwise returns `0`.
 fn with_signed_i12_adjustment(value: i32) -> i32 {
-    if is_positive_i12(value) {
+    if i12::is_positive(value) {
         0
     } else {
         1
@@ -354,24 +473,6 @@ fn with_signed_i12_adjustment(value: i32) -> i32 {
 mod test {
     use super::*;
     use pretty_assertions::assert_eq;
-
-    #[test]
-    fn sign_extend_i12_test() {
-        let neg_1 = 0b_1111_1111_1111 as i32;
-        let max_i12 = 0b_0111_1111_1111 as i32;
-        let min_i12 = 0b_1000_0000_0000 as i32;
-        assert_eq!(sign_extend_i12(neg_1), -1);
-        assert_eq!(sign_extend_i12(max_i12), i12::MAX);
-        assert_eq!(sign_extend_i12(min_i12), i12::MIN);
-    }
-
-    #[test]
-    fn is_positive_i12_test() {
-        let neg_1 = 0b_1111_1111_1111 as i32;
-        let max_i12 = 0b_0111_1111_1111 as i32;
-        assert!(!is_positive_i12(neg_1));
-        assert!(is_positive_i12(max_i12));
-    }
 
     #[test]
     fn iter_test() {
