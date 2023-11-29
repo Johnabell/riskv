@@ -55,12 +55,12 @@ Feel free to contribute and get involved if you would like to learn more about a
   - [X] SW
   - [x] JAL
   - [x] JALR
-  - [ ] BEQ
-  - [ ] BNE
-  - [ ] BLT
-  - [ ] BGE
-  - [ ] BLTU
-  - [ ] BGEU
+  - [x] BEQ
+  - [x] BNE
+  - [x] BLT
+  - [x] BGE
+  - [x] BLTU
+  - [x] BGEU
 
 </details>
 

@@ -27,6 +27,18 @@ pub(crate) mod i12 {
     }
 }
 
+/// The 13-bit signed integer type.
+pub(crate) mod i13 {
+    /// The largest value that can be represented by this integer type
+    /// (2<sup>20</sup> &minus; 1).
+    pub const MAX: i16 = 4095;
+    /// The smallest value that can be represented by this integer type
+    /// (&minus;2<sup>20</sup>).
+    pub const MIN: i16 = -4096;
+    /// The mask to extract an `i21` from a 16-bit integer type.
+    pub const MASK: i16 = 0b_0001_1111_1111_1111;
+}
+
 /// The 21-bit signed integer type.
 pub(crate) mod i21 {
     /// The largest value that can be represented by this integer type

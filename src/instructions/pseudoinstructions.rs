@@ -458,6 +458,168 @@ impl Instruction {
             },
         )
     }
+
+    /// # Branch equal to zero
+    ///
+    /// Branch if the value in register `rs` is equal to zero.
+    ///
+    /// Note: This pseudoinstruction desugars to `BEQ rs, x0, offset`
+    /// See
+    /// [ref](https://github.com/riscv-non-isa/riscv-asm-manual/blob/master/riscv-asm.md#-a-listing-of-standard-risc-v-pseudoinstructions)
+    #[allow(non_snake_case)]
+    pub(crate) fn BEQZ(rs: Register, offset: i16) -> PseudoinstructionMappingIter {
+        PseudoinstructionMappingIter::One(Instruction::BEQ {
+            rs1: rs,
+            rs2: Register::ZERO,
+            offset,
+        })
+    }
+
+    /// # Branch not equal to zero
+    ///
+    /// Branch if the value in register `rs` is not equal to zero.
+    ///
+    /// Note: This pseudoinstruction desugars to `BNE rs, x0, offset`
+    /// See
+    /// [ref](https://github.com/riscv-non-isa/riscv-asm-manual/blob/master/riscv-asm.md#-a-listing-of-standard-risc-v-pseudoinstructions)
+    #[allow(non_snake_case)]
+    pub(crate) fn BNEZ(rs: Register, offset: i16) -> PseudoinstructionMappingIter {
+        PseudoinstructionMappingIter::One(Instruction::BNE {
+            rs1: rs,
+            rs2: Register::ZERO,
+            offset,
+        })
+    }
+
+    /// # Branch less than or equal to zero
+    ///
+    /// Branch if the value in register `rs` is less than or equal to zero.
+    ///
+    /// Note: This pseudoinstruction desugars to `BGE x0, rs, offset`
+    /// See
+    /// [ref](https://github.com/riscv-non-isa/riscv-asm-manual/blob/master/riscv-asm.md#-a-listing-of-standard-risc-v-pseudoinstructions)
+    #[allow(non_snake_case)]
+    pub(crate) fn BLEZ(rs: Register, offset: i16) -> PseudoinstructionMappingIter {
+        PseudoinstructionMappingIter::One(Instruction::BGE {
+            rs1: Register::ZERO,
+            rs2: rs,
+            offset,
+        })
+    }
+
+    /// # Branch greater than or equal to zero
+    ///
+    /// Branch if the value in register `rs` greater than or equal to zero.
+    ///
+    /// Note: This pseudoinstruction desugars to `BGE rs, x0, offset`
+    /// See
+    /// [ref](https://github.com/riscv-non-isa/riscv-asm-manual/blob/master/riscv-asm.md#-a-listing-of-standard-risc-v-pseudoinstructions)
+    #[allow(non_snake_case)]
+    pub(crate) fn BGEZ(rs: Register, offset: i16) -> PseudoinstructionMappingIter {
+        PseudoinstructionMappingIter::One(Instruction::BGE {
+            rs1: rs,
+            rs2: Register::ZERO,
+            offset,
+        })
+    }
+
+    /// # Branch less than zero
+    ///
+    /// Branch if the value in register `rs` is less than zero.
+    ///
+    /// Note: This pseudoinstruction desugars to `BLT rs, x0, offset`
+    /// See
+    /// [ref](https://github.com/riscv-non-isa/riscv-asm-manual/blob/master/riscv-asm.md#-a-listing-of-standard-risc-v-pseudoinstructions)
+    #[allow(non_snake_case)]
+    pub(crate) fn BLTZ(rs: Register, offset: i16) -> PseudoinstructionMappingIter {
+        PseudoinstructionMappingIter::One(Instruction::BLT {
+            rs1: rs,
+            rs2: Register::ZERO,
+            offset,
+        })
+    }
+
+    /// # Branch greater than zero
+    ///
+    /// Branch if the value in register `rs` is greater than zero.
+    ///
+    /// Note: This pseudoinstruction desugars to `BLT x0, rs, offset`
+    /// See
+    /// [ref](https://github.com/riscv-non-isa/riscv-asm-manual/blob/master/riscv-asm.md#-a-listing-of-standard-risc-v-pseudoinstructions)
+    #[allow(non_snake_case)]
+    pub(crate) fn BGTZ(rs: Register, offset: i16) -> PseudoinstructionMappingIter {
+        PseudoinstructionMappingIter::One(Instruction::BLT {
+            rs1: Register::ZERO,
+            rs2: rs,
+            offset,
+        })
+    }
+
+    /// # Branch greater than
+    ///
+    /// Branch if the value in register `rs1` is greater than the value in `rs2`.
+    ///
+    /// Note: This pseudoinstruction desugars to `BLT rs2, rs1, offset`
+    /// See
+    /// [ref](https://github.com/riscv-non-isa/riscv-asm-manual/blob/master/riscv-asm.md#-a-listing-of-standard-risc-v-pseudoinstructions)
+    #[allow(non_snake_case)]
+    pub(crate) fn BGT(rs1: Register, rs2: Register, offset: i16) -> PseudoinstructionMappingIter {
+        PseudoinstructionMappingIter::One(Instruction::BLT {
+            rs1: rs2,
+            rs2: rs1,
+            offset,
+        })
+    }
+
+    /// # Branch less than or equal
+    ///
+    /// Branch if the value in register `rs1` is less than or equal to the value in `rs2`.
+    ///
+    /// Note: This pseudoinstruction desugars to `BGE rs2, rs1, offset`
+    /// See
+    /// [ref](https://github.com/riscv-non-isa/riscv-asm-manual/blob/master/riscv-asm.md#-a-listing-of-standard-risc-v-pseudoinstructions)
+    #[allow(non_snake_case)]
+    pub(crate) fn BLE(rs1: Register, rs2: Register, offset: i16) -> PseudoinstructionMappingIter {
+        PseudoinstructionMappingIter::One(Instruction::BGE {
+            rs1: rs2,
+            rs2: rs1,
+            offset,
+        })
+    }
+
+    /// # Branch greater than unsigned
+    ///
+    /// Branch if the value in register `rs1` is greater than the value in `rs2`,
+    /// when using unsigned comparison.
+    ///
+    /// Note: This pseudoinstruction desugars to `BLTU rs2, rs1, offset`
+    /// See
+    /// [ref](https://github.com/riscv-non-isa/riscv-asm-manual/blob/master/riscv-asm.md#-a-listing-of-standard-risc-v-pseudoinstructions)
+    #[allow(non_snake_case)]
+    pub(crate) fn BGTU(rs1: Register, rs2: Register, offset: i16) -> PseudoinstructionMappingIter {
+        PseudoinstructionMappingIter::One(Instruction::BLTU {
+            rs1: rs2,
+            rs2: rs1,
+            offset,
+        })
+    }
+
+    /// # Branch less than or equal unsigned
+    ///
+    /// Branch if the value in register `rs1` is less than or equal to the value in `rs2`,
+    /// when using unsigned comparison.
+    ///
+    /// Note: This pseudoinstruction desugars to `BGEU rs2, rs1, offset`
+    /// See
+    /// [ref](https://github.com/riscv-non-isa/riscv-asm-manual/blob/master/riscv-asm.md#-a-listing-of-standard-risc-v-pseudoinstructions)
+    #[allow(non_snake_case)]
+    pub(crate) fn BLEU(rs1: Register, rs2: Register, offset: i16) -> PseudoinstructionMappingIter {
+        PseudoinstructionMappingIter::One(Instruction::BGEU {
+            rs1: rs2,
+            rs2: rs1,
+            offset,
+        })
+    }
 }
 
 /// If the `i12` value is negative returns `1` otherwise returns `0`.

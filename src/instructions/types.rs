@@ -13,8 +13,8 @@
 use crate::registers::Register;
 
 use super::{
-    csr::Csr, csr_imm::CsrImm, immi::ImmI, immu::ImmU, jimm::JImm, rd::Rd, rs1::Rs1, rs2::Rs2,
-    shamt::Shamt, simmi::SImmI,
+    bimm::BImm, csr::Csr, csr_imm::CsrImm, immi::ImmI, immu::ImmU, jimm::JImm, rd::Rd, rs1::Rs1,
+    rs2::Rs2, shamt::Shamt, simmi::SImmI,
 };
 
 /// `R`-type instruction - Register type instructions.
@@ -84,5 +84,15 @@ impl J {
     /// Encode the destination register and offset value as an `J`-type instruction.
     pub(super) const fn encode(rd: Register, offset: i32) -> u32 {
         Rd::encode(rd) + JImm::encode(offset)
+    }
+}
+
+/// `B`-type instruction - Branch type instructions.
+pub(super) struct B;
+
+impl B {
+    /// Encode the source registers and offset value as an `B`-type instruction.
+    pub(super) const fn encode(rs1: Register, rs2: Register, offset: i16) -> u32 {
+        Rs1::encode(rs1) + Rs2::encode(rs2) + BImm::encode(offset)
     }
 }
