@@ -125,7 +125,7 @@ pub(super) enum Instruction {
     ///
     /// Performs logical left shift on the value in register rs1 by the shift amount held in the
     /// lower 5 bits of the immediate
-    /// In RV64, bit-25 is used to shamt[5].
+    /// In RV64, bit-25 is used for `shamt[5]`.
     ///
     /// `rd <- rs1 << shamt`
     SLLI {
@@ -138,7 +138,7 @@ pub(super) enum Instruction {
     ///
     /// Performs logical right shift on the value in register rs1 by the shift amount held in the
     /// lower 5 bits of the immediate
-    /// In RV64, bit-25 is used to shamt[5].
+    /// In RV64, bit-25 is used for `shamt[5]`.
     ///
     /// `rd <- rs1 >>u shamt`
     SRLI {
@@ -151,7 +151,7 @@ pub(super) enum Instruction {
     ///
     /// Performs arithmetic right shift on the value in register rs1 by the shift amount held in
     /// the lower 5 bits of the immediate
-    /// In RV64, bit-25 is used to shamt[5].
+    /// In RV64, bit-25 is used for `shamt[5]`.
     ///
     /// `rd <- rs1 >>s shamt`
     SRAI {
@@ -423,7 +423,7 @@ pub(super) enum Instruction {
     /// # Atomic CSR read write immediate
     ///
     /// Update the CSR using an XLEN-bit value obtained by zero-extending a
-    /// 5-bit unsigned immediate (uimm[4:0]) field encoded in the rs1 field.
+    /// 5-bit unsigned immediate (`uimm[4:0]`) field encoded in the rs1 field.
     ///
     /// `rd = CSRs[csr]; CSRs[csr] = zext(imm)`
     CSRRWI { rd: Register, csr: u16, imm: u8 },
@@ -431,7 +431,7 @@ pub(super) enum Instruction {
     /// # Atomic CSR read set immediate
     ///
     /// Set CSR bit using an XLEN-bit value obtained by zero-extending a 5-bit
-    /// unsigned immediate (uimm[4:0]) field encoded in the rs1 field.
+    /// unsigned immediate (`uimm[4:0]`) field encoded in the rs1 field.
     ///
     /// `t = CSRs[csr]; CSRs[csr] = t | zext(imm); rd = t`
     CSRRSI { rd: Register, csr: u16, imm: u8 },
@@ -439,7 +439,7 @@ pub(super) enum Instruction {
     /// # Atomic CSR read clear immediate
     ///
     /// Clear CSR bit using an XLEN-bit value obtained by zero-extending a
-    /// 5-bit unsigned immediate (uimm[4:0]) field encoded in the rs1 field.
+    /// 5-bit unsigned immediate (`uimm[4:0]`) field encoded in the rs1 field.
     ///
     /// `t = CSRs[csr]; CSRs[csr] = t & ~zext(imm); rd = t`
     CSRRCI { rd: Register, csr: u16, imm: u8 },

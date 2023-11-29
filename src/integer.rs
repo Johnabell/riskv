@@ -12,6 +12,10 @@ pub(crate) trait AsSigned<N> {
     fn as_signed(&self) -> N;
 }
 
+pub trait AsUsize {
+    fn as_usize(&self) -> usize;
+}
+
 macro_rules! impl_signed_unsigned {
     ($signed:ty, $unsigned:ty) => {
         impl AsUnsigned<$unsigned> for $signed {
@@ -32,6 +36,16 @@ macro_rules! impl_signed_unsigned {
         impl AsSigned<$signed> for $unsigned {
             fn as_signed(&self) -> $signed {
                 *self as $signed
+            }
+        }
+        impl AsUsize for $unsigned {
+            fn as_usize(&self) -> usize {
+                *self as usize
+            }
+        }
+        impl AsUsize for $signed {
+            fn as_usize(&self) -> usize {
+                *self as usize
             }
         }
     };

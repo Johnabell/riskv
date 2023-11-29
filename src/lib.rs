@@ -5,3 +5,5 @@ mod integer;
 mod memory;
 pub mod processor;
 mod registers;
+#[cfg(any(test, doc))]
+mod test;

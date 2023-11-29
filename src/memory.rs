@@ -1,6 +1,6 @@
 use crate::integer::AsSigned;
 
-#[derive(Debug, Default, PartialEq, Eq)]
+#[derive(Debug, Default, PartialEq, Eq, Clone)]
 pub struct Memory {
     data: Vec<u8>,
 }
@@ -45,10 +45,19 @@ impl Memory {
     }
 
     #[inline]
-    fn resize<const N: usize>(&mut self, location: usize) {
+    pub(super) fn resize<const N: usize>(&mut self, location: usize) {
         if location + N > self.data.len() {
             self.data.resize(location + N, 0);
         }
+    }
+
+    #[cfg(test)]
+    pub(crate) fn with_initial_state(&mut self, Self { mut data }: Self) {
+        std::mem::swap(&mut self.data, &mut data);
+
+        data.into_iter()
+            .enumerate()
+            .for_each(|(i, value)| self.store_byte(i, value as i8));
     }
 }
 
