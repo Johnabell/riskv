@@ -1,12 +1,18 @@
+//! The computer's memory.
 use crate::integer::AsSigned;
 
+/// An expandable implementation of the computer's memory.
+///
+/// The bytes of memory are stored as little endian.
+///
+// TODO: consider making memory a trait so we can support different endianess
+// and fixed size.
 #[derive(Debug, Default, PartialEq, Eq, Clone)]
 pub struct Memory {
+    /// The raw bytes of the memory
     data: Vec<u8>,
 }
 
-// Note this implementation of memory is little endian. It would be nice to make memory generic
-// over endianess.
 impl Memory {
     /// Get 8 bits of memory
     pub fn load_byte(&mut self, location: usize) -> i8 {
@@ -44,6 +50,11 @@ impl Memory {
         self.data[location..location + 4].copy_from_slice(&value.to_le_bytes());
     }
 
+    /// Resize this memory
+    ///
+    /// If `location + N` is greater than `len`, the `Memory` is extended by the
+    /// difference, with each additional slot filled with `value`.
+    /// If `location` is less than `len`, this method does nothing.
     #[inline]
     pub(super) fn resize<const N: usize>(&mut self, location: usize) {
         if location + N > self.data.len() {
@@ -51,6 +62,12 @@ impl Memory {
         }
     }
 
+    /// Given the initial state of memory the contents of this memory will get
+    /// applied on top of the initial state.
+    ///
+    /// This is useful for tests where what we really care about is the memory
+    /// `diff` rather than the whole state of the memory including all the
+    /// programmes instructions.
     #[cfg(test)]
     pub(crate) fn with_initial_state(&mut self, Self { mut data }: Self) {
         std::mem::swap(&mut self.data, &mut data);

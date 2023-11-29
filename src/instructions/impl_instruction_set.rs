@@ -1,3 +1,5 @@
+//! The implementation of [crate::instruction_set::InstructionSet] for
+//! [crate::instructions::Instruction].
 use crate::csr::{ControlStatusRegisters, CSR32};
 use crate::instruction_set::{Exception, InstructionSet};
 use crate::integer::{AsSigned, AsUnsigned};
@@ -6,9 +8,12 @@ use crate::registers::Register;
 
 use super::Instruction;
 
-impl InstructionSet for Instruction {
+impl Instruction {
+    /// A bit mask apply to a register before being used as the shift amount.
     const SHIFT_MASK: i32 = 0b_00000000_00000000_00000000_00011111;
+}
 
+impl InstructionSet for Instruction {
     type RegisterType = i32;
     type CSRType = CSR32;
 
