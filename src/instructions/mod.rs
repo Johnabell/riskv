@@ -13,6 +13,7 @@ mod rs1;
 mod rs2;
 mod shamt;
 mod simmi;
+mod types;
 
 use self::{
     csr::Csr, csr_imm::CsrImm, funct3::Funct3, funct6::Funct6, funct7::Funct7, immi::ImmI,
@@ -547,12 +548,12 @@ impl Instruction {
                     rs1: Rs1::decode(value),
                     rs2: Rs2::decode(value),
                 },
-                (0b_110, 0b_0100000) => Instruction::OR {
+                (0b_110, 0b_0000000) => Instruction::OR {
                     rd: Rd::decode(value),
                     rs1: Rs1::decode(value),
                     rs2: Rs2::decode(value),
                 },
-                (0b_111, 0b_0100000) => Instruction::AND {
+                (0b_111, 0b_0000000) => Instruction::AND {
                     rd: Rd::decode(value),
                     rs1: Rs1::decode(value),
                     rs2: Rs2::decode(value),
@@ -642,6 +643,149 @@ impl Instruction {
         };
         Ok(instruction)
     }
+
+    pub(crate) const fn encode(self) -> u32 {
+        match self {
+            Instruction::LUI { rd, imm } => {
+                u32::from_le(0b_0000000_00000_00000_000_00000_0110111) + types::U::encode(rd, imm)
+            }
+            Instruction::AUIPC { rd, imm } => {
+                u32::from_le(0b_0000000_00000_00000_000_00000_0010111) + types::U::encode(rd, imm)
+            }
+            Instruction::ADDI { rd, rs1, imm } => {
+                u32::from_le(0b_0000000_00000_00000_000_00000_0010011)
+                    + types::I::encode(rd, rs1, imm)
+            }
+            Instruction::SLTI { rd, rs1, imm } => {
+                u32::from_le(0b_0000000_00000_00000_010_00000_0010011)
+                    + types::I::encode(rd, rs1, imm)
+            }
+            Instruction::SLTIU { rd, rs1, imm } => {
+                u32::from_le(0b_0000000_00000_00000_011_00000_0010011)
+                    + types::I::encode(rd, rs1, imm)
+            }
+            Instruction::XORI { rd, rs1, imm } => {
+                u32::from_le(0b_0000000_00000_00000_100_00000_0010011)
+                    + types::I::encode(rd, rs1, imm)
+            }
+            Instruction::ORI { rd, rs1, imm } => {
+                u32::from_le(0b_0000000_00000_00000_110_00000_0010011)
+                    + types::I::encode(rd, rs1, imm)
+            }
+            Instruction::ANDI { rd, rs1, imm } => {
+                u32::from_le(0b_0000000_00000_00000_111_00000_0010011)
+                    + types::I::encode(rd, rs1, imm)
+            }
+            Instruction::SLLI { rd, rs1, shamt } => {
+                u32::from_le(0b_0000000_00000_00000_001_00000_0010011)
+                    + types::I::encode_shamt(rd, rs1, shamt)
+            }
+            Instruction::SRLI { rd, rs1, shamt } => {
+                u32::from_le(0b_0000000_00000_00000_101_00000_0010011)
+                    + types::I::encode_shamt(rd, rs1, shamt)
+            }
+            Instruction::SRAI { rd, rs1, shamt } => {
+                u32::from_le(0b_0100000_00000_00000_101_00000_0010011)
+                    + types::I::encode_shamt(rd, rs1, shamt)
+            }
+            Instruction::ADD { rd, rs1, rs2 } => {
+                u32::from_le(0b_0000000_00000_00000_000_00000_0110011)
+                    + types::R::encode(rd, rs1, rs2)
+            }
+            Instruction::SUB { rd, rs1, rs2 } => {
+                u32::from_le(0b_0100000_00000_00000_000_00000_0110011)
+                    + types::R::encode(rd, rs1, rs2)
+            }
+            Instruction::SLL { rd, rs1, rs2 } => {
+                u32::from_le(0b_0000000_00000_00000_001_00000_0110011)
+                    + types::R::encode(rd, rs1, rs2)
+            }
+            Instruction::SLT { rd, rs1, rs2 } => {
+                u32::from_le(0b_0000000_00000_00000_010_00000_0110011)
+                    + types::R::encode(rd, rs1, rs2)
+            }
+            Instruction::SLTU { rd, rs1, rs2 } => {
+                u32::from_le(0b_0000000_00000_00000_011_00000_0110011)
+                    + types::R::encode(rd, rs1, rs2)
+            }
+            Instruction::XOR { rd, rs1, rs2 } => {
+                u32::from_le(0b_0000000_00000_00000_100_00000_0110011)
+                    + types::R::encode(rd, rs1, rs2)
+            }
+            Instruction::SRL { rd, rs1, rs2 } => {
+                u32::from_le(0b_0000000_00000_00000_101_00000_0110011)
+                    + types::R::encode(rd, rs1, rs2)
+            }
+            Instruction::SRA { rd, rs1, rs2 } => {
+                u32::from_le(0b_0100000_00000_00000_101_00000_0110011)
+                    + types::R::encode(rd, rs1, rs2)
+            }
+            Instruction::OR { rd, rs1, rs2 } => {
+                u32::from_le(0b_0000000_00000_00000_110_00000_0110011)
+                    + types::R::encode(rd, rs1, rs2)
+            }
+            Instruction::AND { rd, rs1, rs2 } => {
+                u32::from_le(0b_0000000_00000_00000_111_00000_0110011)
+                    + types::R::encode(rd, rs1, rs2)
+            }
+            Instruction::LB { rd, rs1, offset } => {
+                u32::from_le(0b_0000000_00000_00000_000_00000_0000011)
+                    + types::I::encode(rd, rs1, offset)
+            }
+            Instruction::LH { rd, rs1, offset } => {
+                u32::from_le(0b_0000000_00000_00000_001_00000_0000011)
+                    + types::I::encode(rd, rs1, offset)
+            }
+            Instruction::LW { rd, rs1, offset } => {
+                u32::from_le(0b_0000000_00000_00000_010_00000_0000011)
+                    + types::I::encode(rd, rs1, offset)
+            }
+            Instruction::LBU { rd, rs1, offset } => {
+                u32::from_le(0b_0000000_00000_00000_100_00000_0000011)
+                    + types::I::encode(rd, rs1, offset)
+            }
+            Instruction::LHU { rd, rs1, offset } => {
+                u32::from_le(0b_0000000_00000_00000_101_00000_0000011)
+                    + types::I::encode(rd, rs1, offset)
+            }
+            Instruction::SB { rs1, rs2, offset } => {
+                u32::from_le(0b_0000000_00000_00000_000_00000_0100011)
+                    + types::S::encode(rs1, rs2, offset)
+            }
+            Instruction::SH { rs1, rs2, offset } => {
+                u32::from_le(0b_0000000_00000_00000_001_00000_0100011)
+                    + types::S::encode(rs1, rs2, offset)
+            }
+            Instruction::SW { rs1, rs2, offset } => {
+                u32::from_le(0b_0000000_00000_00000_010_00000_0100011)
+                    + types::S::encode(rs1, rs2, offset)
+            }
+            Instruction::CSRRW { rd, rs1, csr } => {
+                u32::from_le(0b_0000000_00000_00000_001_00000_1110011)
+                    + types::I::encode_csr(rd, rs1, csr)
+            }
+            Instruction::CSRRS { rd, rs1, csr } => {
+                u32::from_le(0b_0000000_00000_00000_010_00000_1110011)
+                    + types::I::encode_csr(rd, rs1, csr)
+            }
+            Instruction::CSRRC { rd, rs1, csr } => {
+                u32::from_le(0b_0000000_00000_00000_011_00000_1110011)
+                    + types::I::encode_csr(rd, rs1, csr)
+            }
+            Instruction::CSRRWI { rd, csr, imm } => {
+                u32::from_le(0b_0000000_00000_00000_101_00000_1110011)
+                    + types::I::encode_csri(rd, imm, csr)
+            }
+            Instruction::CSRRSI { rd, csr, imm } => {
+                u32::from_le(0b_0000000_00000_00000_110_00000_1110011)
+                    + types::I::encode_csri(rd, imm, csr)
+            }
+            Instruction::CSRRCI { rd, csr, imm } => {
+                u32::from_le(0b_0000000_00000_00000_111_00000_1110011)
+                    + types::I::encode_csri(rd, imm, csr)
+            }
+        }
+    }
 }
 
 impl TryFrom<u32> for Instruction {
@@ -672,7 +816,7 @@ mod test {
     }
 
     #[test]
-    fn lui_from_i32() {
+    fn lui_from_u32() {
         assert_eq!(
             Instruction::from(u32::from_le(0b_0100100_01010_01100_101_11000_0110111)),
             Instruction::LUI {
@@ -683,7 +827,19 @@ mod test {
     }
 
     #[test]
-    fn auipc_from_i32() {
+    fn encode_lui() {
+        assert_eq!(
+            Instruction::LUI {
+                rd: Register::S8,
+                imm: 0x48A65
+            }
+            .encode(),
+            u32::from_le(0b_0100100_01010_01100_101_11000_0110111)
+        );
+    }
+
+    #[test]
+    fn auipc_from_u32() {
         assert_eq!(
             Instruction::from(u32::from_le(0b_0100100_01010_01100_111_11100_0010111)),
             Instruction::AUIPC {
@@ -694,7 +850,19 @@ mod test {
     }
 
     #[test]
-    fn addi_from_i32() {
+    fn encode_auipc() {
+        assert_eq!(
+            Instruction::AUIPC {
+                rd: Register::T3,
+                imm: 0x48A67
+            }
+            .encode(),
+            u32::from_le(0b_0100100_01010_01100_111_11100_0010111),
+        );
+    }
+
+    #[test]
+    fn addi_from_u32() {
         assert_eq!(
             Instruction::from(u32::from_le(0b_0000001_00000_00000_000_00001_0010011)),
             Instruction::ADDI {
@@ -706,7 +874,20 @@ mod test {
     }
 
     #[test]
-    fn slti_from_i32() {
+    fn encode_addi() {
+        assert_eq!(
+            Instruction::ADDI {
+                rd: Register::RA,
+                rs1: Register::ZERO,
+                imm: 32
+            }
+            .encode(),
+            u32::from_le(0b_0000001_00000_00000_000_00001_0010011),
+        );
+    }
+
+    #[test]
+    fn slti_from_u32() {
         assert_eq!(
             Instruction::from(u32::from_le(0b_0000001_00000_00100_010_00011_0010011)),
             Instruction::SLTI {
@@ -718,7 +899,20 @@ mod test {
     }
 
     #[test]
-    fn sltiu_from_i32() {
+    fn encode_slti() {
+        assert_eq!(
+            Instruction::SLTI {
+                rd: Register::GP,
+                rs1: Register::TP,
+                imm: 32
+            }
+            .encode(),
+            u32::from_le(0b_0000001_00000_00100_010_00011_0010011),
+        );
+    }
+
+    #[test]
+    fn sltiu_from_u32() {
         assert_eq!(
             Instruction::from(u32::from_le(0b_0000011_00000_00100_011_00011_0010011)),
             Instruction::SLTIU {
@@ -730,7 +924,20 @@ mod test {
     }
 
     #[test]
-    fn xori_from_i32() {
+    fn encode_sltiu() {
+        assert_eq!(
+            Instruction::SLTIU {
+                rd: Register::GP,
+                rs1: Register::TP,
+                imm: 96
+            }
+            .encode(),
+            u32::from_le(0b_0000011_00000_00100_011_00011_0010011),
+        );
+    }
+
+    #[test]
+    fn xori_from_u32() {
         assert_eq!(
             Instruction::from(u32::from_le(0b_1111111_11000_01100_100_01011_0010011)),
             Instruction::XORI {
@@ -742,7 +949,20 @@ mod test {
     }
 
     #[test]
-    fn ori_from_i32() {
+    fn encode_xori() {
+        assert_eq!(
+            Instruction::XORI {
+                rd: Register::A1,
+                rs1: Register::A2,
+                imm: -8
+            }
+            .encode(),
+            u32::from_le(0b_1111111_11000_01100_100_01011_0010011),
+        );
+    }
+
+    #[test]
+    fn ori_from_u32() {
         assert_eq!(
             Instruction::from(u32::from_le(0b_1111111_01000_01101_110_10011_0010011)),
             Instruction::ORI {
@@ -754,7 +974,20 @@ mod test {
     }
 
     #[test]
-    fn andi_from_i32() {
+    fn encode_ori() {
+        assert_eq!(
+            Instruction::ORI {
+                rd: Register::S3,
+                rs1: Register::A3,
+                imm: -24
+            }
+            .encode(),
+            u32::from_le(0b_1111111_01000_01101_110_10011_0010011),
+        );
+    }
+
+    #[test]
+    fn andi_from_u32() {
         assert_eq!(
             Instruction::from(u32::from_le(0b_0000010_01000_11100_111_01111_0010011)),
             Instruction::ANDI {
@@ -766,7 +999,20 @@ mod test {
     }
 
     #[test]
-    fn slli_from_i32() {
+    fn encode_andi() {
+        assert_eq!(
+            Instruction::ANDI {
+                rd: Register::A5,
+                rs1: Register::T3,
+                imm: 72
+            }
+            .encode(),
+            u32::from_le(0b_0000010_01000_11100_111_01111_0010011),
+        );
+    }
+
+    #[test]
+    fn slli_from_u32() {
         assert_eq!(
             Instruction::from(u32::from_le(0b_0000000_01010_10010_001_01101_0010011)),
             Instruction::SLLI {
@@ -778,7 +1024,20 @@ mod test {
     }
 
     #[test]
-    fn srli_from_i32() {
+    fn encode_slli() {
+        assert_eq!(
+            Instruction::SLLI {
+                rd: Register::A3,
+                rs1: Register::S2,
+                shamt: 10
+            }
+            .encode(),
+            u32::from_le(0b_0000000_01010_10010_001_01101_0010011),
+        );
+    }
+
+    #[test]
+    fn srli_from_u32() {
         assert_eq!(
             Instruction::from(u32::from_le(0b_0000001_01010_10011_101_01110_0010011)),
             Instruction::SRLI {
@@ -790,7 +1049,20 @@ mod test {
     }
 
     #[test]
-    fn srai_from_i32() {
+    fn encode_srli() {
+        assert_eq!(
+            Instruction::SRLI {
+                rd: Register::A4,
+                rs1: Register::S3,
+                shamt: 42
+            }
+            .encode(),
+            u32::from_le(0b_0000001_01010_10011_101_01110_0010011),
+        );
+    }
+
+    #[test]
+    fn srai_from_u32() {
         assert_eq!(
             Instruction::from(u32::from_le(0b_0100000_11010_10100_101_10000_0010011)),
             Instruction::SRAI {
@@ -802,7 +1074,20 @@ mod test {
     }
 
     #[test]
-    fn add_from_i32() {
+    fn encode_srai() {
+        assert_eq!(
+            Instruction::SRAI {
+                rd: Register::A6,
+                rs1: Register::S4,
+                shamt: 26
+            }
+            .encode(),
+            u32::from_le(0b_0100000_11010_10100_101_10000_0010011),
+        );
+    }
+
+    #[test]
+    fn add_from_u32() {
         assert_eq!(
             Instruction::from(u32::from_le(0b_0000000_01101_01011_000_00010_0110011)),
             Instruction::ADD {
@@ -814,7 +1099,20 @@ mod test {
     }
 
     #[test]
-    fn sub_from_i32() {
+    fn encode_add() {
+        assert_eq!(
+            Instruction::ADD {
+                rd: Register::SP,
+                rs1: Register::A1,
+                rs2: Register::A3,
+            }
+            .encode(),
+            u32::from_le(0b_0000000_01101_01011_000_00010_0110011),
+        );
+    }
+
+    #[test]
+    fn sub_from_u32() {
         assert_eq!(
             Instruction::from(u32::from_le(0b_0100000_11101_11011_000_00010_0110011)),
             Instruction::SUB {
@@ -826,7 +1124,20 @@ mod test {
     }
 
     #[test]
-    fn sll_from_i32() {
+    fn encode_sub() {
+        assert_eq!(
+            Instruction::SUB {
+                rd: Register::SP,
+                rs1: Register::S11,
+                rs2: Register::T4,
+            }
+            .encode(),
+            u32::from_le(0b_0100000_11101_11011_000_00010_0110011),
+        );
+    }
+
+    #[test]
+    fn sll_from_u32() {
         assert_eq!(
             Instruction::from(u32::from_le(0b_0000000_10110_10101_001_10100_0110011)),
             Instruction::SLL {
@@ -838,7 +1149,20 @@ mod test {
     }
 
     #[test]
-    fn stl_from_i32() {
+    fn encode_sll() {
+        assert_eq!(
+            Instruction::SLL {
+                rd: Register::S4,
+                rs1: Register::S5,
+                rs2: Register::S6,
+            }
+            .encode(),
+            u32::from_le(0b_0000000_10110_10101_001_10100_0110011),
+        );
+    }
+
+    #[test]
+    fn stl_from_u32() {
         assert_eq!(
             Instruction::from(u32::from_le(0b_0000000_11100_10011_010_00110_0110011)),
             Instruction::SLT {
@@ -850,7 +1174,20 @@ mod test {
     }
 
     #[test]
-    fn stlu_from_i32() {
+    fn encode_stl() {
+        assert_eq!(
+            Instruction::SLT {
+                rd: Register::T1,
+                rs1: Register::S3,
+                rs2: Register::T3,
+            }
+            .encode(),
+            u32::from_le(0b_0000000_11100_10011_010_00110_0110011),
+        );
+    }
+
+    #[test]
+    fn stlu_from_u32() {
         assert_eq!(
             Instruction::from(u32::from_le(0b_0000000_11000_10001_011_01110_0110011)),
             Instruction::SLTU {
@@ -862,7 +1199,20 @@ mod test {
     }
 
     #[test]
-    fn xor_from_i32() {
+    fn encode_stlu() {
+        assert_eq!(
+            Instruction::SLTU {
+                rd: Register::A4,
+                rs1: Register::A7,
+                rs2: Register::S8,
+            }
+            .encode(),
+            u32::from_le(0b_0000000_11000_10001_011_01110_0110011),
+        );
+    }
+
+    #[test]
+    fn xor_from_u32() {
         assert_eq!(
             Instruction::from(u32::from_le(0b_0000000_00111_01010_100_00101_0110011)),
             Instruction::XOR {
@@ -874,7 +1224,20 @@ mod test {
     }
 
     #[test]
-    fn srl_from_i32() {
+    fn encode_xor() {
+        assert_eq!(
+            Instruction::XOR {
+                rd: Register::T0,
+                rs1: Register::A0,
+                rs2: Register::T2,
+            }
+            .encode(),
+            u32::from_le(0b_0000000_00111_01010_100_00101_0110011),
+        );
+    }
+
+    #[test]
+    fn srl_from_u32() {
         assert_eq!(
             Instruction::from(u32::from_le(0b_0000000_11001_11000_101_10111_0110011)),
             Instruction::SRL {
@@ -886,7 +1249,20 @@ mod test {
     }
 
     #[test]
-    fn sra_from_i32() {
+    fn encode_srl() {
+        assert_eq!(
+            Instruction::SRL {
+                rd: Register::S7,
+                rs1: Register::S8,
+                rs2: Register::S9,
+            }
+            .encode(),
+            u32::from_le(0b_0000000_11001_11000_101_10111_0110011),
+        );
+    }
+
+    #[test]
+    fn sra_from_u32() {
         assert_eq!(
             Instruction::from(u32::from_le(0b_0100000_11100_11011_101_11010_0110011)),
             Instruction::SRA {
@@ -898,9 +1274,22 @@ mod test {
     }
 
     #[test]
-    fn or_from_i32() {
+    fn encode_sra() {
         assert_eq!(
-            Instruction::from(u32::from_le(0b_0100000_11100_01001_110_01000_0110011)),
+            Instruction::SRA {
+                rd: Register::S10,
+                rs1: Register::S11,
+                rs2: Register::T3,
+            }
+            .encode(),
+            u32::from_le(0b_0100000_11100_11011_101_11010_0110011),
+        );
+    }
+
+    #[test]
+    fn or_from_u32() {
+        assert_eq!(
+            Instruction::from(u32::from_le(0b_0000000_11100_01001_110_01000_0110011)),
             Instruction::OR {
                 rd: Register::S0,
                 rs1: Register::S1,
@@ -910,9 +1299,22 @@ mod test {
     }
 
     #[test]
-    fn and_from_i32() {
+    fn encode_or() {
         assert_eq!(
-            Instruction::from(u32::from_le(0b_0100000_11111_11110_111_11101_0110011)),
+            Instruction::OR {
+                rd: Register::S0,
+                rs1: Register::S1,
+                rs2: Register::T3,
+            }
+            .encode(),
+            u32::from_le(0b_0000000_11100_01001_110_01000_0110011),
+        );
+    }
+
+    #[test]
+    fn and_from_u32() {
+        assert_eq!(
+            Instruction::from(u32::from_le(0b_0000000_11111_11110_111_11101_0110011)),
             Instruction::AND {
                 rd: Register::T4,
                 rs1: Register::T5,
@@ -922,7 +1324,20 @@ mod test {
     }
 
     #[test]
-    fn lb_from_i32() {
+    fn encode_and() {
+        assert_eq!(
+            Instruction::AND {
+                rd: Register::T4,
+                rs1: Register::T5,
+                rs2: Register::T6,
+            }
+            .encode(),
+            u32::from_le(0b_0000000_11111_11110_111_11101_0110011),
+        );
+    }
+
+    #[test]
+    fn lb_from_u32() {
         assert_eq!(
             Instruction::from(u32::from_le(0b_0000001_11001_01100_000_11100_0000011)),
             Instruction::LB {
@@ -934,7 +1349,20 @@ mod test {
     }
 
     #[test]
-    fn lh_from_i32() {
+    fn encode_lb() {
+        assert_eq!(
+            Instruction::LB {
+                rd: Register::T3,
+                rs1: Register::A2,
+                offset: 57,
+            }
+            .encode(),
+            u32::from_le(0b_0000001_11001_01100_000_11100_0000011),
+        );
+    }
+
+    #[test]
+    fn lh_from_u32() {
         assert_eq!(
             Instruction::from(u32::from_le(0b_0000001_11010_01100_001_11100_0000011)),
             Instruction::LH {
@@ -946,7 +1374,20 @@ mod test {
     }
 
     #[test]
-    fn lw_from_i32() {
+    fn encode_lh() {
+        assert_eq!(
+            Instruction::LH {
+                rd: Register::T3,
+                rs1: Register::A2,
+                offset: 58,
+            }
+            .encode(),
+            u32::from_le(0b_0000001_11010_01100_001_11100_0000011),
+        );
+    }
+
+    #[test]
+    fn lw_from_u32() {
         assert_eq!(
             Instruction::from(u32::from_le(0b_0000001_11000_01100_010_11100_0000011)),
             Instruction::LW {
@@ -958,7 +1399,20 @@ mod test {
     }
 
     #[test]
-    fn lbu_from_i32() {
+    fn encode_lw() {
+        assert_eq!(
+            Instruction::LW {
+                rd: Register::T3,
+                rs1: Register::A2,
+                offset: 56,
+            }
+            .encode(),
+            u32::from_le(0b_0000001_11000_01100_010_11100_0000011),
+        );
+    }
+
+    #[test]
+    fn lbu_from_u32() {
         assert_eq!(
             Instruction::from(u32::from_le(0b_0000001_11011_01100_100_11100_0000011)),
             Instruction::LBU {
@@ -970,7 +1424,20 @@ mod test {
     }
 
     #[test]
-    fn lhu_from_i32() {
+    fn encode_lbu() {
+        assert_eq!(
+            Instruction::LBU {
+                rd: Register::T3,
+                rs1: Register::A2,
+                offset: 59,
+            }
+            .encode(),
+            u32::from_le(0b_0000001_11011_01100_100_11100_0000011),
+        );
+    }
+
+    #[test]
+    fn lhu_from_u32() {
         assert_eq!(
             Instruction::from(u32::from_le(0b_0000001_11100_01100_101_11100_0000011)),
             Instruction::LHU {
@@ -982,7 +1449,20 @@ mod test {
     }
 
     #[test]
-    fn sb_from_i32() {
+    fn encode_lhu() {
+        assert_eq!(
+            Instruction::LHU {
+                rd: Register::T3,
+                rs1: Register::A2,
+                offset: 60,
+            }
+            .encode(),
+            u32::from_le(0b_0000001_11100_01100_101_11100_0000011),
+        );
+    }
+
+    #[test]
+    fn sb_from_u32() {
         assert_eq!(
             Instruction::from(u32::from_le(0b_0000001_11101_01101_000_11101_0100011)),
             Instruction::SB {
@@ -994,7 +1474,20 @@ mod test {
     }
 
     #[test]
-    fn sh_from_i32() {
+    fn encode_sb() {
+        assert_eq!(
+            Instruction::SB {
+                rs1: Register::A3,
+                rs2: Register::T4,
+                offset: 61,
+            }
+            .encode(),
+            u32::from_le(0b_0000001_11101_01101_000_11101_0100011),
+        );
+    }
+
+    #[test]
+    fn sh_from_u32() {
         assert_eq!(
             Instruction::from(u32::from_le(0b_0000001_11101_01101_001_11110_0100011)),
             Instruction::SH {
@@ -1006,7 +1499,20 @@ mod test {
     }
 
     #[test]
-    fn sw_from_i32() {
+    fn encode_sh() {
+        assert_eq!(
+            Instruction::SH {
+                rs1: Register::A3,
+                rs2: Register::T4,
+                offset: 62,
+            }
+            .encode(),
+            u32::from_le(0b_0000001_11101_01101_001_11110_0100011),
+        );
+    }
+
+    #[test]
+    fn sw_from_u32() {
         assert_eq!(
             Instruction::from(u32::from_le(0b_0000001_11111_01101_010_11111_0100011)),
             Instruction::SW {
@@ -1018,7 +1524,20 @@ mod test {
     }
 
     #[test]
-    fn csrrw_from_i32() {
+    fn encode_sw() {
+        assert_eq!(
+            Instruction::SW {
+                rs1: Register::A3,
+                rs2: Register::T6,
+                offset: 63,
+            }
+            .encode(),
+            u32::from_le(0b_0000001_11111_01101_010_11111_0100011),
+        );
+    }
+
+    #[test]
+    fn csrrw_from_u32() {
         assert_eq!(
             Instruction::from(u32::from_le(0b_0001001_11111_01111_001_11011_1110011)),
             Instruction::CSRRW {
@@ -1030,7 +1549,20 @@ mod test {
     }
 
     #[test]
-    fn csrrs_from_i32() {
+    fn encode_csrrw() {
+        assert_eq!(
+            Instruction::CSRRW {
+                rd: Register::S11,
+                rs1: Register::A5,
+                csr: 319,
+            }
+            .encode(),
+            u32::from_le(0b_0001001_11111_01111_001_11011_1110011),
+        );
+    }
+
+    #[test]
+    fn csrrs_from_u32() {
         assert_eq!(
             Instruction::from(u32::from_le(0b_0101001_11111_01011_010_10011_1110011)),
             Instruction::CSRRS {
@@ -1042,7 +1574,20 @@ mod test {
     }
 
     #[test]
-    fn csrrc_from_i32() {
+    fn encode_csrrs() {
+        assert_eq!(
+            Instruction::CSRRS {
+                rd: Register::S3,
+                rs1: Register::A1,
+                csr: 1343,
+            }
+            .encode(),
+            u32::from_le(0b_0101001_11111_01011_010_10011_1110011),
+        );
+    }
+
+    #[test]
+    fn csrrc_from_u32() {
         assert_eq!(
             Instruction::from(u32::from_le(0b_1101001_11111_01001_011_10111_1110011)),
             Instruction::CSRRC {
@@ -1054,7 +1599,20 @@ mod test {
     }
 
     #[test]
-    fn csrrwi_from_i32() {
+    fn encode_csrrc() {
+        assert_eq!(
+            Instruction::CSRRC {
+                rd: Register::S7,
+                rs1: Register::S1,
+                csr: 3391,
+            }
+            .encode(),
+            u32::from_le(0b_1101001_11111_01001_011_10111_1110011),
+        );
+    }
+
+    #[test]
+    fn csrrwi_from_u32() {
         assert_eq!(
             Instruction::from(u32::from_le(0b_0000001_11011_01001_101_10101_1110011)),
             Instruction::CSRRWI {
@@ -1066,7 +1624,20 @@ mod test {
     }
 
     #[test]
-    fn csrrsi_from_i32() {
+    fn encode_csrrwi() {
+        assert_eq!(
+            Instruction::CSRRWI {
+                rd: Register::S5,
+                imm: 9,
+                csr: 59,
+            }
+            .encode(),
+            u32::from_le(0b_0000001_11011_01001_101_10101_1110011),
+        );
+    }
+
+    #[test]
+    fn csrrsi_from_u32() {
         assert_eq!(
             Instruction::from(u32::from_le(0b_0000001_01010_11011_110_10100_1110011)),
             Instruction::CSRRSI {
@@ -1078,7 +1649,20 @@ mod test {
     }
 
     #[test]
-    fn csrrci_from_i32() {
+    fn encode_csrrsi() {
+        assert_eq!(
+            Instruction::CSRRSI {
+                rd: Register::S4,
+                imm: 27,
+                csr: 42,
+            }
+            .encode(),
+            u32::from_le(0b_0000001_01010_11011_110_10100_1110011),
+        );
+    }
+
+    #[test]
+    fn csrrci_from_u32() {
         assert_eq!(
             Instruction::from(u32::from_le(0b_0000011_11011_11001_111_10001_1110011)),
             Instruction::CSRRCI {
@@ -1086,6 +1670,19 @@ mod test {
                 imm: 25,
                 csr: 123,
             }
+        );
+    }
+
+    #[test]
+    fn encode_csrrci() {
+        assert_eq!(
+            Instruction::CSRRCI {
+                rd: Register::A7,
+                imm: 25,
+                csr: 123,
+            }
+            .encode(),
+            u32::from_le(0b_0000011_11011_11001_111_10001_1110011),
         );
     }
 }
