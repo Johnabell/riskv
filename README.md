@@ -53,8 +53,8 @@ Feel free to contribute and get involved if you would like to learn more about a
   - [X] SB
   - [X] SH
   - [X] SW
-  - [ ] JAL
-  - [ ] JALR
+  - [x] JAL
+  - [x] JALR
   - [ ] BEQ
   - [ ] BNE
   - [ ] BLT

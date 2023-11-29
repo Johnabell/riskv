@@ -13,11 +13,11 @@
 use crate::registers::Register;
 
 use super::{
-    csr::Csr, csr_imm::CsrImm, immi::ImmI, immu::ImmU, rd::Rd, rs1::Rs1, rs2::Rs2, shamt::Shamt,
-    simmi::SImmI,
+    csr::Csr, csr_imm::CsrImm, immi::ImmI, immu::ImmU, jimm::JImm, rd::Rd, rs1::Rs1, rs2::Rs2,
+    shamt::Shamt, simmi::SImmI,
 };
 
-/// `R`-type instructions - Register type instructions.
+/// `R`-type instruction - Register type instructions.
 pub(super) struct R;
 
 impl R {
@@ -27,7 +27,7 @@ impl R {
     }
 }
 
-/// `I`-type instructions - Immediate type instructions.
+/// `I`-type instruction - Immediate type instructions.
 pub(super) struct I;
 
 impl I {
@@ -56,7 +56,7 @@ impl I {
     }
 }
 
-/// `U`-type instructions - Upper immediate type instructions.
+/// `U`-type instruction - Upper immediate type instructions.
 pub(super) struct U;
 
 impl U {
@@ -67,12 +67,22 @@ impl U {
     }
 }
 
-/// `S`-type instructions - Store type instructions.
+/// `S`-type instruction - Store type instructions.
 pub(super) struct S;
 
 impl S {
     /// Encode the source registers and immediate value as an `S`-type instruction.
     pub(super) const fn encode(rs1: Register, rs2: Register, simmi: i16) -> u32 {
         Rs1::encode(rs1) + Rs2::encode(rs2) + SImmI::encode(simmi)
+    }
+}
+
+/// `J`-type instruction - Jump type instructions.
+pub(super) struct J;
+
+impl J {
+    /// Encode the destination register and offset value as an `J`-type instruction.
+    pub(super) const fn encode(rd: Register, offset: i32) -> u32 {
+        Rd::encode(rd) + JImm::encode(offset)
     }
 }
