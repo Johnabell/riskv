@@ -145,6 +145,7 @@ macro_rules! processor_state {
 ///     executed_on: {registers: {a0: 3, s10: 12}},
 ///     results_in: {registers: {a0: 0, s10: 12}, csr: {20: 12}, pc: 4},
 /// );
+/// ```
 ///
 /// For a test where the expectation is that an exception will be thrown:
 ///
