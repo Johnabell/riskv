@@ -37,7 +37,7 @@ jobs:
         run: |
           cargo doc --document-private-items
           rm -rf $DOC_DIR
-          echo "<meta http-equiv=\"refresh\" content=\"0; url=tiptop\">" > target/doc/index.html
+          echo "<meta http-equiv=\"refresh\" content=\"0; url=riskv\">" > target/doc/index.html
           cp -r target/doc $DOC_DIR
       - name: Fix file permissions
         # To fix file permissions issue: https://github.com/actions/deploy-pages/issues/188
