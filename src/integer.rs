@@ -211,9 +211,9 @@ mod test {
 
     #[test]
     fn sign_extend_i12_test() {
-        let neg_1 = 0b_1111_1111_1111 as i32;
-        let max_i12 = 0b_0111_1111_1111 as i32;
-        let min_i12 = 0b_1000_0000_0000 as i32;
+        let neg_1 = 0b_1111_1111_1111_i32;
+        let max_i12 = 0b_0111_1111_1111_i32;
+        let min_i12 = 0b_1000_0000_0000_i32;
         assert_eq!(i12::sign_extend(neg_1), -1);
         assert_eq!(i12::sign_extend(max_i12), i12::MAX);
         assert_eq!(i12::sign_extend(min_i12), i12::MIN);
@@ -221,8 +221,8 @@ mod test {
 
     #[test]
     fn is_positive_i12_test() {
-        let neg_1 = 0b_1111_1111_1111 as i32;
-        let max_i12 = 0b_0111_1111_1111 as i32;
+        let neg_1 = 0b_1111_1111_1111_i32;
+        let max_i12 = 0b_0111_1111_1111_i32;
         assert!(!i12::is_positive(neg_1));
         assert!(i12::is_positive(max_i12));
     }
